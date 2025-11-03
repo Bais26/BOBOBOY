@@ -17,8 +17,10 @@ export function LoginForm() {
     setIsLoading(true);
 
     try {
+      // Simulasi API call - ganti dengan logic authentication Anda
       await new Promise(resolve => setTimeout(resolve, 1000));
       
+      // Redirect ke dashboard setelah login berhasil
       router.push('/dashboard');
     } catch (error) {
       console.error('Login failed:', error);
@@ -29,10 +31,9 @@ export function LoginForm() {
 
   return (
     <div className="w-full">
-      {/* Mobile Logo */}
       <div className="lg:hidden mb-8 text-center">
         <div className="flex items-center justify-center space-x-2 mb-2">
-          <div className="w-32 h-32 rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center">
               <img src="/assets/logo.png" alt="cbn logo" />
           </div>
         </div>

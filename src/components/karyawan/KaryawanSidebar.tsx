@@ -15,8 +15,7 @@ const karyawanMenuItems = [
   { icon: ClockIcon, label: 'Absensi Saya', href: '/karyawan/absensi' },
   { icon: CalendarIcon, label: 'Jadwal Kerja Saya', href: '/karyawan/jadwal' },
   { icon: DocumentTextIcon, label: 'Riwayat Absensi', href: '/karyawan/riwayat' },
-  { icon: DocumentTextIcon, label: 'Pengajuan Izin', href: '/karyawan/izin' },
-  { icon: UserCircleIcon, label: 'Profil Saya', href: '/karyawan/profil' },
+  { icon: UserCircleIcon, label: 'Profil Saya', href: '/karyawan/profile' },
 ];
 
 export default function KaryawanSidebar() {

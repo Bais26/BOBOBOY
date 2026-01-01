@@ -13,7 +13,7 @@ interface TableProps<T> {
   onRowClick?: (row: T) => void;
 }
 
-export default function Table<T extends { id: string }>({ 
+export default function   Table<T extends { id: string }>({ 
   columns, 
   data, 
   onRowClick 

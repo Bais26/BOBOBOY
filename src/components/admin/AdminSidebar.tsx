@@ -23,21 +23,15 @@ const adminMenuItems = [
     href: '/admin/absensi',
     hasSubmenu: true,
     submenu: [
-      { label: 'Data Absensi', href: '/admin/absensi/data' },
-      { label: 'Persetujuan Izin', href: '/admin/absensi/persetujuan' },
+      { label: 'Rekap', href: '/admin/rekap' },
+      { label: 'Riwayat', href: '/admin/riwayat' },
     ]
   },
   { 
     icon: CalendarIcon, 
     label: 'Jadwal Kerja', 
     href: '/admin/jadwal',
-    hasSubmenu: true,
-    submenu: [
-      { label: 'Jadwal Shift', href: '/admin/jadwal/shift' },
-      { label: 'Pengaturan Shift', href: '/admin/jadwal/pengaturan' },
-    ]
   },
-  { icon: DocumentTextIcon, label: 'Laporan Absensi', href: '/admin/laporan' },
 ];
 
 export default function AdminSidebar() {

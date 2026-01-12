@@ -2,11 +2,11 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const data = [
-  { name: 'Senin', hadir: 28, izin: 0, sakit: 2 },
-  { name: 'Selasa', hadir: 35, izin: 3, sakit: 2 },
-  { name: 'Rabu', hadir: 30, izin: 4, sakit: 3 },
-  { name: 'Kamis', hadir: 32, izin: 3, sakit: 3 },
-  { name: 'Jumat', hadir: 25, izin: 5, sakit: 4 },
+  { name: 'Senin', hadir: 28, tidak_hadir: 0, terlambat: 2 },
+  { name: 'Selasa', hadir: 35, tidak_hadir: 3, terlambat: 2 },
+  { name: 'Rabu', hadir: 30, tidak_hadir: 4, terlambat: 3 },
+  { name: 'Kamis', hadir: 32, tidak_hadir: 3, terlambat: 3 },
+  { name: 'Jumat', hadir: 25, tidak_hadir: 5, terlambat: 4 },
 ];
 
 export default function AttendanceChart() {
@@ -23,8 +23,8 @@ export default function AttendanceChart() {
           <Tooltip />
           <Legend />
           <Bar dataKey="hadir" fill="#10b981" radius={[4, 4, 0, 0]} name="Hadir" />
-          <Bar dataKey="izin" fill="#ef4444" radius={[4, 4, 0, 0]} name="Izin" />
-          <Bar dataKey="sakit" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Sakit" />
+          <Bar dataKey="tidak_hadir" fill="#ef4444" radius={[4, 4, 0, 0]} name="Tidak hadir" />
+          <Bar dataKey="terlambat" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Terlambat" />
         </BarChart>
       </ResponsiveContainer>
     </div>

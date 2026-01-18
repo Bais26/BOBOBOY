@@ -5,7 +5,7 @@ export default function ProfileCard({ profile }: { profile: any }) {
       <div>
         <p className="text-xs text-gray-500 uppercase">{profile.role}</p>
         <h2 className="font-semibold text-lg">
-          {profile.namaDepan} {profile.namaBelakang}
+          {profile.full_name}
         </h2>
         <p className="text-sm text-gray-500">{profile.email}</p>
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Alert } from "../ui/Alert";
 import { Loader2 } from "lucide-react";
+import { jwtDecode } from "jwt-decode";
 
 export function LoginForm() {
   const [email, setEmail] = useState("");
@@ -20,6 +21,7 @@ export function LoginForm() {
     showResend?: boolean;
   } | null>(null);
   const [isResending, setIsResending] = useState(false);
+  
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,49 +36,23 @@ export function LoginForm() {
 
       const { access_token, user } = response.data;
 
-      console.log("✅ Login berhasil");
-      console.log("User:", user);
-      console.log("Token:", access_token ? "Ada" : "Tidak ada");
+      localStorage.setItem("access_token", access_token);
+      localStorage.setItem("role", user.role);
+      localStorage.setItem("user_id", user.id);
+      localStorage.setItem("user_email", user.email);
 
-      // ✅ Set cookies dengan proper options
-      // max-age=86400 = 24 jam
-      const cookieOptions = "path=/; max-age=86400; SameSite=Lax";
-      
-      document.cookie = `access_token=${access_token}; ${cookieOptions}`;
-      document.cookie = `role=${user.role}; ${cookieOptions}`;
-      document.cookie = `user_id=${user.id}; ${cookieOptions}`;
-      document.cookie = `user_email=${user.email}; ${cookieOptions}`;
+      console.log("✅ Token disimpan ke localStorage");
 
-      console.log("✅ Cookies berhasil di-set");
-      
-      // ✅ Verify cookies tersimpan
-      const savedToken = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('access_token='))
-        ?.split('=')[1];
-      
-      console.log("🔍 Verify token di cookies:", savedToken ? "Ada" : "TIDAK ADA!");
-
-      if (!savedToken) {
-        console.error("❌ Token tidak tersimpan di cookies!");
-        throw new Error("Failed to save authentication token");
-      }
-
-      // ✅ IMPORTANT: Tunggu sebentar agar cookies ter-set dengan baik
-      await new Promise(resolve => setTimeout(resolve, 200));
-
-      console.log("🚀 Redirecting to dashboard...");
-
-      // Redirect berdasarkan role
+      // REDIRECT SESUAI ROLE (TANPA RELOAD)
       if (user.role === "admin") {
-        router.push("/admin/dashboard");
+        router.replace("/admin/dashboard");
       } else if (user.role === "karyawan") {
-        router.push("/karyawan/dashboard");
+        router.replace("/karyawan/dashboard");
       } else {
-        router.push("/login");
+        router.replace("/login");
       }
 
-      // ✅ Force refresh untuk ensure cookies loaded
+
       setTimeout(() => {
         window.location.reload();
       }, 300);
@@ -122,6 +98,25 @@ export function LoginForm() {
       setIsResending(false);
     }
   };
+
+  useEffect(() => {
+    const token = localStorage.getItem('access_token')
+
+    if (!token) return
+
+    try {
+      const payload: any = jwtDecode(token)
+
+      if (payload.exp * 1000 > Date.now()) {
+        router.replace(
+          payload.role === 'admin'
+            ? '/admin/dashboard'
+            : '/karyawan/dashboard'
+        )
+      }
+    } catch {}
+  }, [])
+
 
   return (
     <div className="w-full">

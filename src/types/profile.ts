@@ -1,4 +1,5 @@
 export interface Profile {
+  full_name: String;
   namaDepan: string;
   namaBelakang: string;
   email: string;

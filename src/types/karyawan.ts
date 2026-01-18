@@ -1,6 +1,7 @@
 export interface Karyawan {
   id: string;
   nama: string;
+  full_name: string;
   email: string;
   departemen: string;
   statusKaryawan: 'Kontrak' | 'Karyawan Tetap' | 'Magang';

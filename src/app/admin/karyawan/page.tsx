@@ -1,7 +1,9 @@
 "use client";
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { PlusIcon } from "@heroicons/react/24/outline";
+import axios from "axios";
 import Table from "@/components/shared/Table";
 import SearchInput from "@/components/shared/SearchInput";
 import StatusBadge from "@/components/shared/StatusBadge";
@@ -10,43 +12,67 @@ import ExportButton from "@/components/shared/ExportButton";
 import Pagination from "@/components/shared/Pagination";
 import ActionMenu from "@/components/shared/ActionMenu";
 import { Karyawan, StatusKaryawan, StatusAktif } from "@/types/karyawan";
-
-// Mock data
-const mockData: Karyawan[] = Array.from({ length: 100 }, (_, i) => ({
-  id: `CBN${234 + i}`,
-  nama: "Bais Yufan",
-  email: "Baisyufan@gmail.com",
-  departemen: ["IT", "FINANCE", "MARKETING", "UI/UX"][i % 4],
-  statusKaryawan: (["Kontrak", "Karyawan Tetap", "Magang"] as StatusKaryawan[])[
-    i % 3
-  ],
-  status: (i % 5 === 0 ? "Nonaktif" : "Aktif") as StatusAktif,
-}));
+import Swal from "sweetalert2";
 
 export default function ManagementKaryawanPage() {
   const router = useRouter();
+  const [data, setData] = useState<Karyawan[]>([]);
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [departemenFilter, setDepartemenFilter] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("access_token");
+      if (!token) throw new Error("Token tidak ditemukan");
+
+      const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/v1/karyawan/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // ✅ Pastikan data berupa array
+      const karyawanArray = Array.isArray(res.data) ? res.data : res.data.data || [];
+      setData(karyawanArray);
+    } catch (err: any) {
+      console.error(err);
+      Swal.fire({
+        icon: "error",
+        title: "Gagal",
+        text: err.message || "Gagal mengambil data karyawan",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
   // Filter data
-  const filteredData = mockData.filter((karyawan) => {
+  const filteredData = data.filter((karyawan) => {
+    const nama = karyawan.nama || karyawan.full_name || ""; // fallback
+    const email = karyawan.email || "";
+    const id = karyawan.id || "";
+
     const matchesSearch =
-      karyawan.nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      karyawan.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      karyawan.id.toLowerCase().includes(searchQuery.toLowerCase());
+      nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      id.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesStatus =
-      statusFilter.length === 0 ||
-      statusFilter.includes(karyawan.statusKaryawan);
+      statusFilter.length === 0 || statusFilter.includes(karyawan.statusKaryawan);
     const matchesDepartemen =
-      departemenFilter.length === 0 ||
-      departemenFilter.includes(karyawan.departemen);
+      departemenFilter.length === 0 || departemenFilter.includes(karyawan.departemen);
 
     return matchesSearch && matchesStatus && matchesDepartemen;
   });
+
 
   // Pagination
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
@@ -57,28 +83,55 @@ export default function ManagementKaryawanPage() {
 
   const handleExport = (format: "pdf" | "excel") => {
     console.log(`Exporting as ${format}`);
-    alert(`Export to ${format.toUpperCase()} - Feature coming soon!`);
+    Swal.fire(`Export to ${format.toUpperCase()} - Feature coming soon!`);
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm("Apakah Anda yakin ingin menghapus karyawan ini?")) {
-      // TODO: Implement delete API call
-      console.log("Delete karyawan:", id);
-      alert("Karyawan berhasil dihapus!");
+  const handleDelete = async (id: string) => {
+    const result = await Swal.fire({
+      title: "Apakah Anda yakin?",
+      text: "Karyawan akan dihapus permanen!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Ya, hapus",
+      cancelButtonText: "Batal",
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      const token = localStorage.getItem("access_token");
+      if (!token) throw new Error("Token tidak ditemukan");
+
+      await axios.delete(`${process.env.NEXT_PUBLIC_API_URL}/v1/karyawan/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      Swal.fire({
+        icon: "success",
+        title: "Berhasil",
+        text: "Karyawan berhasil dihapus",
+      });
+
+      fetchData(); // refresh data
+    } catch (err: any) {
+      console.error(err);
+      Swal.fire({
+        icon: "error",
+        title: "Gagal",
+        text: err.message || "Terjadi kesalahan",
+      });
     }
   };
 
-  const getStatusVariant = (
-    status: StatusKaryawan
-  ): "kontrak" | "tetap" | "magang" => {
+  const getStatusVariant = (status: StatusKaryawan): "kontrak" | "tetap" | "magang" => {
     if (status === "Kontrak") return "kontrak";
     if (status === "Karyawan Tetap") return "tetap";
     return "magang";
   };
 
   const columns = [
-    { header: "ID", accessor: "id" as keyof Karyawan },
-    { header: "NAMA KARYAWAN", accessor: "nama" as keyof Karyawan },
+    // { header: "ID", accessor: "id" as keyof Karyawan },
+    { header: "NAMA KARYAWAN", accessor: "full_name" as keyof Karyawan },
     { header: "EMAIL", accessor: "email" as keyof Karyawan },
     { header: "DEPARTEMEN", accessor: "departemen" as keyof Karyawan },
     {
@@ -108,9 +161,9 @@ export default function ManagementKaryawanPage() {
               label: "Lihat Detail",
               onClick: () => router.push(`/admin/karyawan/${row.id}`),
             },
-            { 
-              label: "Edit", 
-              onClick: () => router.push(`/admin/karyawan/${row.id}/edit`) 
+            {
+              label: "Edit",
+              onClick: () => router.push(`/admin/karyawan/${row.id}/edit`),
             },
             {
               label: "Hapus",
@@ -132,7 +185,7 @@ export default function ManagementKaryawanPage() {
             <SearchInput
               value={searchQuery}
               onChange={setSearchQuery}
-              placeholder="Cari Nama Karyawan atau Jenis Industri"
+              placeholder="Cari Nama Karyawan atau Email"
             />
           </div>
           <div className="flex items-center gap-3">
@@ -147,31 +200,30 @@ export default function ManagementKaryawanPage() {
               onChange={setStatusFilter}
             />
             <ExportButton onExport={handleExport} />
-            <button 
-              onClick={() => router.push('/admin/karyawan/create')}
-              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-            >
-              <PlusIcon className="w-5 h-5" />
-              Tambah Karyawan
-            </button>
           </div>
         </div>
       </div>
 
       {/* Table */}
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <Table
-          columns={columns}
-          data={paginatedData}
-          onRowClick={(row) => router.push(`/admin/karyawan/${row.id}`)}
-        />
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalItems={filteredData.length}
-          itemsPerPage={itemsPerPage}
-          onPageChange={setCurrentPage}
-        />
+        {loading ? (
+          <div className="p-6 text-center">Loading karyawan...</div>
+        ) : (
+          <>
+            <Table
+              columns={columns}
+              data={paginatedData}
+              onRowClick={(row) => router.push(`/admin/karyawan/${row.id}`)}
+            />
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredData.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+            />
+          </>
+        )}
       </div>
     </div>
   );

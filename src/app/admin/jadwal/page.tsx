@@ -1,12 +1,74 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { PlusIcon, BuildingOfficeIcon, HomeIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { PlusIcon, BuildingOfficeIcon, HomeIcon, XMarkIcon, MapPinIcon, CalendarIcon, CpuChipIcon } from "@heroicons/react/24/outline";
 import SearchInput from "@/components/shared/SearchInput";
 import FilterButton from "@/components/shared/FilterButton";
 import Pagination from "@/components/shared/Pagination";
+import TambahLokasiWFOPopup from "@/components/admin/TambahLokasiWFOPopup";
+import GenerateJadwalPopup from "@/components/admin/GenerateJadwalPopup";
 
-// Mock data dengan status per hari
+// Simple Modal Component (tanpa Headless UI)
+interface SimpleModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+  size?: "sm" | "md" | "lg" | "xl";
+}
+
+function SimpleModal({ isOpen, onClose, title, subtitle, children, size = "md" }: SimpleModalProps) {
+  if (!isOpen) return null;
+
+  const sizeClasses = {
+    sm: "max-w-md",
+    md: "max-w-lg",
+    lg: "max-w-2xl",
+    xl: "max-w-4xl"
+  };
+
+  return (
+    <>
+      {/* Overlay */}
+      <div 
+        className=""
+        onClick={onClose}
+      />
+      
+      {/* Modal */}
+      <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="flex min-h-full items-center justify-center p-4">
+          <div 
+            className={`w-full ${sizeClasses[size]} transform rounded-2xl bg-white shadow-xl transition-all`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900">{title}</h3>
+                {subtitle && (
+                  <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
+                )}
+              </div>
+              <button
+                type="button"
+                className="rounded-md p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 transition"
+                onClick={onClose}
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">{children}</div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 type DayStatus = "WFH" | "WFO" | "OFF";
 
 interface RekapWithSchedule {
@@ -52,32 +114,9 @@ export default function ManagementRekapPage() {
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [data, setData] = useState(mockData);
-  const [showLokasiModal, setShowLokasiModal] = useState(false);
-  const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [isTambahLokasiOpen, setIsTambahLokasiOpen] = useState(false);
+  const [isGenerateJadwalOpen, setIsGenerateJadwalOpen] = useState(false);
   const itemsPerPage = 10;
-
-  // Form states untuk Tambah Lokasi WFO
-  const [lokasiForm, setLokasiForm] = useState({
-    namaLokasi: "",
-    kapasitasMaksimal: "",
-    alamatLengkap: "",
-    latitude: "",
-    longitude: "",
-    radiusCheckIn: "",
-  });
-
-  // Form states untuk Generate Jadwal
-  const [generateForm, setGenerateForm] = useState({
-    konfigurasi: "",
-    tanggalMulai: "",
-    tanggalSelesai: "",
-    kapasitasKantor: "",
-    minWFO: "",
-    maxWFO: "",
-    populationSize: "",
-    generations: "",
-    mutationRate: "",
-  });
 
   const filteredData = data.filter((karyawan) => {
     const q = searchQuery.toLowerCase();
@@ -111,26 +150,6 @@ export default function ManagementRekapPage() {
           : karyawan
       )
     );
-  };
-
-  const handleLokasiSubmit = () => {
-    console.log("Submit Lokasi:", lokasiForm);
-    alert("Lokasi WFO berhasil ditambahkan!");
-    setShowLokasiModal(false);
-    setLokasiForm({
-      namaLokasi: "",
-      kapasitasMaksimal: "",
-      alamatLengkap: "",
-      latitude: "",
-      longitude: "",
-      radiusCheckIn: "",
-    });
-  };
-
-  const handleGenerateSubmit = () => {
-    console.log("Generate Jadwal:", generateForm);
-    alert("Jadwal berhasil di-generate!");
-    setShowGenerateModal(false);
   };
 
   // Render schedule cell dengan dropdown lebih compact
@@ -229,27 +248,18 @@ export default function ManagementRekapPage() {
               onChange={setStatusFilter}
             />
             <button
-              onClick={() => setShowLokasiModal(true)}
+              onClick={() => setIsTambahLokasiOpen(true)}
               className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
             >
               <BuildingOfficeIcon className="w-5 h-5" />
               Tambah Lokasi WFO
             </button>
             <button
-              onClick={() => setShowGenerateModal(true)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+              onClick={() => setIsGenerateJadwalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
+              <CalendarIcon className="w-5 h-5" />
               Generate Jadwal
-            </button>
-            <button
-              onClick={() => router.push("/admin/karyawan/create")}
-              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-            >
-              <PlusIcon className="w-5 h-5" />
-              Tambah Karyawan
             </button>
           </div>
         </div>
@@ -365,338 +375,16 @@ export default function ManagementRekapPage() {
         />
       </div>
 
-      {/* Modal Tambah Lokasi WFO */}
-      {showLokasiModal && (
-        <div className="fixed inset-0 bg-opacity-40 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Manajemen Lokasi WFO</h2>
-              <button
-                onClick={() => setShowLokasiModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <XMarkIcon className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              <p className="text-sm text-gray-600">
-                Tambah lokasi kantor untuk untuk absensi dengan validasi GPS
-              </p>
-
-              <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
-                <PlusIcon className="w-5 h-5" />
-                Tambah Lokasi
-              </button>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tambah Lokasi WFO Baru
-                  </label>
-                  <p className="text-xs text-gray-500 mb-2">Isi form untuk lokasi WFO baru (Nama)</p>
-                  <input
-                    type="text"
-                    placeholder="Nama Lokasi"
-                    value={lokasiForm.namaLokasi}
-                    onChange={(e) => setLokasiForm({ ...lokasiForm, namaLokasi: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Kapasitas Maksimal
-                  </label>
-                  <p className="text-xs text-gray-500 mb-2">
-                    Isi kapasitas untuk WFO dikantor ini (maksimal WFO per hari bisa isi 50-100 orang)
-                  </p>
-                  <input
-                    type="number"
-                    placeholder="Kapasitas Maksimal"
-                    value={lokasiForm.kapasitasMaksimal}
-                    onChange={(e) => setLokasiForm({ ...lokasiForm, kapasitasMaksimal: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Alamat Lengkap
-                  </label>
-                  <p className="text-xs text-gray-500 mb-2">
-                    Isi alamat lengkap dari lokasi untuk di identifikasi lokasi manual
-                  </p>
-                  <textarea
-                    placeholder="Alamat Lengkap"
-                    value={lokasiForm.alamatLengkap}
-                    onChange={(e) => setLokasiForm({ ...lokasiForm, alamatLengkap: e.target.value })}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Latitude
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Latitude"
-                      value={lokasiForm.latitude}
-                      onChange={(e) => setLokasiForm({ ...lokasiForm, latitude: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Longitude
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Longitude"
-                      value={lokasiForm.longitude}
-                      onChange={(e) => setLokasiForm({ ...lokasiForm, longitude: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Radius Check-in (Meter)
-                  </label>
-                  <p className="text-xs text-gray-500 mb-2">
-                    Isi maksimal untuk Check in dari lokasi GPS (50-100 Meter)
-                  </p>
-                  <input
-                    type="number"
-                    placeholder="Radius Check-in"
-                    value={lokasiForm.radiusCheckIn}
-                    onChange={(e) => setLokasiForm({ ...lokasiForm, radiusCheckIn: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  />
-                </div>
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-start gap-3">
-                    <BuildingOfficeIcon className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <h4 className="font-medium text-sm text-gray-900 mb-1">Kantor Pusat Antopeni</h4>
-                      <p className="text-xs text-gray-600 mb-2">
-                        Jl. Setyakusuma no 98, Antopeni, Kaju, Kaju Emot Utara
-                      </p>
-                      <div className="text-xs text-gray-600 space-y-1">
-                        <p>GPS: +1.2509380,116.121.1119812909257</p>
-                        <p>Radius: 100m</p>
-                      </div>
-                      <div className="flex gap-2 mt-3">
-                        <button className="text-xs text-blue-600 hover:text-blue-700 font-medium">
-                          Edit
-                        </button>
-                        <button className="text-xs text-red-600 hover:text-red-700 font-medium">
-                          Hapus
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex gap-3">
-              <button
-                onClick={() => setShowLokasiModal(false)}
-                className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
-              >
-                Batal
-              </button>
-              <button
-                onClick={handleLokasiSubmit}
-                className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-              >
-                Konfirmasi
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Generate Jadwal */}
-      {showGenerateModal && (
-        <div className="fixed inset-0 bg-opacity-40 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Generate Jadwal Kerja Otomatis</h2>
-              <button
-                onClick={() => setShowGenerateModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <XMarkIcon className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              <p className="text-sm text-gray-600">
-                Sistem akan mengautomatkan distribusi WFO/WFH menggunakan Algoritma Genetika
-              </p>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Konfigurasi Pembedivisian
-                  </label>
-                  <p className="text-xs text-gray-500 mb-2">Per 50 / Per 25 / Rata-Rata</p>
-                  <select
-                    value={generateForm.konfigurasi}
-                    onChange={(e) => setGenerateForm({ ...generateForm, konfigurasi: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  >
-                    <option value="">Pilih Konfigurasi</option>
-                    <option value="per50">Per 50</option>
-                    <option value="per25">Per 25</option>
-                    <option value="ratarata">Rata-Rata</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tanggal Mulai
-                  </label>
-                  <input
-                    type="date"
-                    value={generateForm.tanggalMulai}
-                    onChange={(e) => setGenerateForm({ ...generateForm, tanggalMulai: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tanggal Selesai
-                  </label>
-                  <input
-                    type="date"
-                    value={generateForm.tanggalSelesai}
-                    onChange={(e) => setGenerateForm({ ...generateForm, tanggalSelesai: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Kapasitas Kantor (orang)
-                  </label>
-                  <p className="text-xs text-gray-500 mb-2">
-                    Isi maksimal orang yang dapat masuk ke kantor (dalam satu minggu minimal 10-100 orang)
-                  </p>
-                  <input
-                    type="number"
-                    placeholder="Kapasitas Kantor"
-                    value={generateForm.kapasitasKantor}
-                    onChange={(e) => setGenerateForm({ ...generateForm, kapasitasKantor: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Min WFO per Minggu
-                  </label>
-                  <p className="text-xs text-gray-500 mb-2">
-                    Isi minimal orang yang bisa WFO dikantor (dalam sehari bisa masuk 10-100 orang)
-                  </p>
-                  <input
-                    type="number"
-                    placeholder="Min WFO"
-                    value={generateForm.minWFO}
-                    onChange={(e) => setGenerateForm({ ...generateForm, minWFO: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Max WFO per Minggu
-                  </label>
-                  <p className="text-xs text-gray-500 mb-2">
-                    Isi maksimal orang yang bisa WFO dikantor (dalam sehari bisa masuk 10-100 orang)
-                  </p>
-                  <input
-                    type="number"
-                    placeholder="Max WFO"
-                    value={generateForm.maxWFO}
-                    onChange={(e) => setGenerateForm({ ...generateForm, maxWFO: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Parameter Algoritma Genetika
-                  </label>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Population Size
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="50"
-                    value={generateForm.populationSize}
-                    onChange={(e) => setGenerateForm({ ...generateForm, populationSize: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Generations
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="100"
-                    value={generateForm.generations}
-                    onChange={(e) => setGenerateForm({ ...generateForm, generations: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Mutation Rate
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="0.1"
-                    value={generateForm.mutationRate}
-                    onChange={(e) => setGenerateForm({ ...generateForm, mutationRate: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 flex gap-3">
-              <button
-                onClick={() => setShowGenerateModal(false)}
-                className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
-              >
-                Batal
-              </button>
-              <button
-                onClick={handleGenerateSubmit}
-                className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-              >
-                Konfirmasi
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Popup Components */}
+      <TambahLokasiWFOPopup
+        isOpen={isTambahLokasiOpen} 
+        onClose={() => setIsTambahLokasiOpen(false)} 
+      />
+      
+      <GenerateJadwalPopup
+        isOpen={isGenerateJadwalOpen} 
+        onClose={() => setIsGenerateJadwalOpen(false)} 
+      />
     </div>
   );
 }

@@ -1,6 +1,10 @@
 'use client';
-import { useState } from 'react';
-import { PencilIcon } from '@heroicons/react/24/outline';
+
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+import Swal from 'sweetalert2';
+import { useRouter, useParams } from 'next/navigation';
+
 import ProfileHeader from '@/components/shared/ProfileHeader';
 import DataDiriSection from '@/components/karyawan/DataDiriSection';
 import AlamatSection from '@/components/karyawan/AlamatSection';
@@ -8,48 +12,88 @@ import KontakDaruratSection from '@/components/karyawan/KontakDaruratSection';
 import RekeningBankSection from '@/components/karyawan/RekeningBankSection';
 import { KaryawanProfile } from '@/types/profil';
 
-// Mock data
-const mockProfile: KaryawanProfile = {
-  id: 'CBN234',
-  nama: 'Bais Yufan',
-  email: 'Baisyufan2004@gmail.com',
-  jabatan: 'WEB DEVELOPER',
-  statusKaryawan: 'Kontrak',
-  masukKantor: '24/09/2024',
-  status: 'Aktif',
-  
-  namaDepan: 'Bais',
-  namaBelakang: 'Yufan',
-  tanggalLahir: '28 November 2004',
-  jenisKelamin: 'Laki-laki',
-  tinggiBadan: '179cm',
-  beratBadan: '62kg',
-  
-  namaAlamat: 'Apartemen',
-  pinLokasi: {
-    lat: -6.914744,
-    lng: 107.609810,
-  },
-  namaJalan: 'Jl. Sukaragara No.31, Antapani Kidul, Kec. Antapani, Kota Bandung',
-  detailAlamat: 'Depan ada Warung',
-  
-  kontakDarurat: {
-    nama: 'Dakna',
-    hubungan: 'Teman',
-    nomorTelepon: '08123456789',
-  },
-  
-  rekening: {
-    namaBank: 'BCA',
-    namaRekening: '1234567891101',
-    nomorRekening: '1234567891101',
-    namaPemilikRekening: 'M Bais Yufan Mardlansah',
-  },
-};
-
 export default function ProfilKaryawanPage() {
-  const [profile] = useState<KaryawanProfile>(mockProfile);
-  const [isEditing, setIsEditing] = useState(false);
+  const router = useRouter();
+  const params = useParams(); // untuk admin lihat detail karyawan
+  const [profile, setProfile] = useState<KaryawanProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        setLoading(true);
+
+        // ambil token
+        const token = localStorage.getItem('access_token');
+        if (!token) throw new Error('Token tidak ditemukan');
+
+        // tentukan karyawan_id
+        const karyawanId = params?.id || localStorage.getItem('user_id');
+        if (!karyawanId) throw new Error('Karyawan ID tidak ditemukan');
+
+        const res = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_URL}/v1/karyawan/${karyawanId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        // mapping API ke type KaryawanProfile
+        const data: KaryawanProfile = {
+          id: res.data.id || karyawanId,
+          nama: res.data.full_name,
+          email: res.data.email || '-',
+          jabatan: res.data.posisi || '-',
+          statusKaryawan: res.data.karyawan_detail.status_karyawan || '-',
+          masukKantor: res.data.karyawan_detail.tanggal_masuk || '-',
+          status: res.data.karyawan_detail.status || '-',
+
+          namaDepan: res.data.karyawan_detail.nama_depan || '-',
+          namaBelakang: res.data.karyawan_detail.nama_belakang || '-',
+          tanggalLahir: res.data.karyawan_detail.tanggal_lahir || '-',
+          jenisKelamin: res.data.karyawan_detail.jenis_kelamin || '-',
+          tinggiBadan: res.data.karyawan_detail.tinggi_badan || '-',
+          beratBadan: res.data.karyawan_detail.berat_badan || '-',
+
+          namaAlamat: res.data.karyawan_detail.nama_alamat || '-',
+          pinLokasi: res.data.karyawan_detail.pin_lokasi || { lat: 0, lng: 0 },
+          namaJalan: res.data.karyawan_detail.alamat_lengkap || '-',
+          detailAlamat: res.data.karyawan_detail.detail_alamat || '-',
+
+          kontakDarurat: {
+            nama: res.data.karyawan_detail.nama_kontak_darurat || '-',
+            hubungan: res.data.karyawan_detail.hubungan_kontak_darurat || '-',
+            nomorTelepon: res.data.karyawan_detail.nomor_telepon_darurat || '-',
+          },
+
+          rekening: {
+            namaBank: res.data.karyawan_detail.nama_bank || '-',
+            namaRekening: res.data.karyawan_detail.nama_rekening || '-',
+            nomorRekening: res.data.karyawan_detail.nomor_rekening || '-',
+            namaPemilikRekening: res.data.karyawan_detail.nama_pemilik_rekening || '-',
+          },
+        };
+
+        setProfile(data);
+      } catch (err: any) {
+        console.error(err);
+        Swal.fire({
+          icon: 'error',
+          title: 'Gagal',
+          text: err.message || 'Gagal memuat data karyawan',
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [params]);
+
+  if (loading) return <div className="text-center py-20">Loading...</div>;
+  if (!profile) return <div className="text-center py-20">Profile tidak ditemukan</div>;
 
   return (
     <div className="space-y-6">

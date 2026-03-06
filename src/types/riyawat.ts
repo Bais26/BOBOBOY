@@ -2,7 +2,7 @@ export type ModeKerja = "WFO" | "WFH";
 
 export type StatusAbsensi = "Hadir" | "Izin" | "Sakit" | "Alpha";
 
-export interface Absensi {
+export interface Riwayat {
   id: string;
   tanggal: string;
   jamMasuk: string;

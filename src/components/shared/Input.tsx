@@ -3,7 +3,7 @@ interface InputProps {
   name: string;
   value: string;
   onChange: (value: string) => void;
-  type?: 'text' | 'email' | 'number' | 'tel';
+  type?: 'text' | 'email' | 'number' | 'tel' | 'date';
   placeholder?: string;
   required?: boolean;
   disabled?: boolean;

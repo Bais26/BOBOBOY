@@ -1,6 +1,7 @@
 import { Fragment, useState, useEffect } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
 import { XMarkIcon, MapPinIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
+import Swal from 'sweetalert2'
 
 interface TambahLokasiWFOPopupProps {
   isOpen: boolean
@@ -62,11 +63,11 @@ const getAuthToken = (): string | null => {
   return localStorage.getItem('access_token') || sessionStorage.getItem('access_token')
 }
 
-export default function TambahLokasiWFOPopup({ 
-  isOpen, 
-  onClose, 
+export default function TambahLokasiWFOPopup({
+  isOpen,
+  onClose,
   onSuccess,
-  editingLocation = null 
+  editingLocation = null
 }: TambahLokasiWFOPopupProps) {
   const [formData, setFormData] = useState({
     name: '',
@@ -118,7 +119,7 @@ export default function TambahLokasiWFOPopup({
   const loadExistingLocations = async () => {
     try {
       const token = getAuthToken()
-      
+
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/v1/schedule/locations`,
         {
@@ -128,7 +129,7 @@ export default function TambahLokasiWFOPopup({
           }
         }
       )
-      
+
       if (response.ok) {
         const data = await response.json()
         setExistingLocations(data)
@@ -155,12 +156,12 @@ export default function TambahLokasiWFOPopup({
     try {
       const lat = parseFloat(formData.latitude)
       const lon = parseFloat(formData.longitude)
-      
+
       if (isNaN(lat) || lat < -90 || lat > 90) {
         setError('Latitude harus antara -90 sampai 90')
         return false
       }
-      
+
       if (isNaN(lon) || lon < -180 || lon > 180) {
         setError('Longitude harus antara -180 sampai 180')
         return false
@@ -192,12 +193,12 @@ export default function TambahLokasiWFOPopup({
 
     const lat = parseFloat(formData.latitude)
     const lon = parseFloat(formData.longitude)
-    
+
     if (isNaN(lat) || lat < -90 || lat > 90) {
       setError('Latitude harus antara -90 sampai 90')
       return false
     }
-    
+
     if (isNaN(lon) || lon < -180 || lon > 180) {
       setError('Longitude harus antara -180 sampai 180')
       return false
@@ -221,7 +222,7 @@ export default function TambahLokasiWFOPopup({
       setError(null)
 
       const token = getAuthToken()
-      
+
       // Validasi dengan API GPS
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/v1/gps/validate`, {
         method: 'POST',
@@ -247,10 +248,23 @@ export default function TambahLokasiWFOPopup({
       const data: GPSValidationResponse = await response.json()
       setValidationResult(data)
 
+      // if (data.is_within_radius) {
+      //   alert('✅ GPS valid! Lokasi berada dalam radius yang ditentukan.')
+      // } else {
+      //   alert('⚠️ GPS valid, tetapi lokasi berada di luar radius yang ditentukan.')
+      // }
       if (data.is_within_radius) {
-        alert('✅ GPS valid! Lokasi berada dalam radius yang ditentukan.')
+        Swal.fire({
+          icon: 'success',
+          title: 'GPS Valid',
+          text: 'Lokasi berada dalam radius yang ditentukan'
+        })
       } else {
-        alert('⚠️ GPS valid, tetapi lokasi berada di luar radius yang ditentukan.')
+        Swal.fire({
+          icon: 'warning',
+          title: 'Di Luar Radius',
+          text: 'Lokasi valid, tetapi berada di luar radius yang ditentukan'
+        })
       }
 
     } catch (err) {
@@ -268,7 +282,7 @@ export default function TambahLokasiWFOPopup({
       setError(null)
 
       const token = getAuthToken()
-      
+
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/v1/gps/distance?` +
         `lat1=${formData.latitude}` +
@@ -288,8 +302,13 @@ export default function TambahLokasiWFOPopup({
       }
 
       const data = await response.json()
-      alert(`Jarak ke kantor pusat: ${(data.distance_meters / 1000).toFixed(2)} km`)
-      
+      // alert(`Jarak ke kantor pusat: ${(data.distance_meters / 1000).toFixed(2)} km`)
+      Swal.fire({
+        icon: 'info',
+        title: 'Hasil Perhitungan Jarak',
+        text: `Jarak ke kantor pusat: ${(data.distance_meters / 1000).toFixed(2)} km`
+      })
+
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Terjadi kesalahan saat menghitung jarak')
     } finally {
@@ -301,7 +320,7 @@ export default function TambahLokasiWFOPopup({
     try {
       setLoading(true)
       const token = getAuthToken()
-      
+
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/v1/gps/test-coordinates`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -313,7 +332,7 @@ export default function TambahLokasiWFOPopup({
       }
 
       const data = await response.json()
-      
+
       // Gunakan contoh koordinat dari API
       const exampleOffice = data.example_offices?.[0]
       if (exampleOffice) {
@@ -326,9 +345,14 @@ export default function TambahLokasiWFOPopup({
           address: exampleOffice.address,
           capacity: '30'
         }))
-        alert('Contoh koordinat telah dimuat dari API')
+        // alert('Contoh koordinat telah dimuat dari API')
+        Swal.fire({
+          icon: 'success',
+          title: 'Berhasil',
+          text: 'Contoh koordinat telah dimuat dari API'
+        })
       }
-      
+
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Terjadi kesalahan saat mengambil contoh koordinat')
     } finally {
@@ -360,7 +384,7 @@ export default function TambahLokasiWFOPopup({
 
       let response: Response
       let url: string
-      
+
       if (editingLocation?.id) {
         // Update existing location
         url = `${process.env.NEXT_PUBLIC_API_URL}/v1/schedule/locations/${editingLocation.id}`
@@ -401,10 +425,10 @@ export default function TambahLokasiWFOPopup({
       })
 
       setValidationResult(null)
-      
+
       // Refresh locations list
       await loadExistingLocations()
-      
+
       // Call success callback
       if (onSuccess) {
         onSuccess()
@@ -414,8 +438,13 @@ export default function TambahLokasiWFOPopup({
       onClose()
 
       // Show success message
-      alert(`✅ Lokasi ${editingLocation?.id ? 'diperbarui' : 'ditambahkan'} berhasil!`)
-      
+      // alert(`✅ Lokasi ${editingLocation?.id ? 'diperbarui' : 'ditambahkan'} berhasil!`)
+      Swal.fire({
+        icon: 'success',
+        title: 'Berhasil',
+        text: `Lokasi berhasil ${editingLocation?.id ? 'diperbarui' : 'ditambahkan'}`
+      })
+
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Terjadi kesalahan tidak terduga'
       setError(errorMessage)
@@ -426,11 +455,23 @@ export default function TambahLokasiWFOPopup({
   }
 
   const handleDeleteLocation = async (locationId: string) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus lokasi ini?')) return
+    // if (!confirm('Apakah Anda yakin ingin menghapus lokasi ini?')) return
+    const result = await Swal.fire({
+      title: 'Hapus Lokasi?',
+      text: 'Lokasi yang dihapus tidak dapat dikembalikan',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#dc2626',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Ya, hapus',
+      cancelButtonText: 'Batal'
+    })
+
+    if (!result.isConfirmed) return
 
     try {
       const token = getAuthToken()
-      
+
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/v1/schedule/locations/${locationId}`,
         {
@@ -442,7 +483,12 @@ export default function TambahLokasiWFOPopup({
       )
 
       if (response.ok) {
-        alert('✅ Lokasi berhasil dihapus!')
+        // alert('✅ Lokasi berhasil dihapus!')
+        Swal.fire({
+          icon: 'success',
+          title: 'Dihapus',
+          text: 'Lokasi berhasil dihapus'
+        })
         await loadExistingLocations() // Refresh list
       } else {
         const errorData = await response.json()
@@ -463,7 +509,7 @@ export default function TambahLokasiWFOPopup({
       longitude: location.longitude.toString(),
       radius: location.radius.toString()
     })
-    
+
     // Scroll to top of form
     setTimeout(() => {
       const modalContent = document.querySelector('.modal-content')
@@ -479,7 +525,7 @@ export default function TambahLokasiWFOPopup({
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-50" onClose={isSubmitting || loading ? () => {} : onClose}>
+      <Dialog as="div" className="relative z-50" onClose={isSubmitting || loading ? () => { } : onClose}>
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-300"
@@ -725,7 +771,7 @@ export default function TambahLokasiWFOPopup({
                         </button>
                       )}
                     </div>
-                    
+
                     <div className="space-y-3">
                       {activeLocations.length === 0 ? (
                         <p className="text-sm text-gray-500 text-center py-4">
@@ -779,8 +825,8 @@ export default function TambahLokasiWFOPopup({
                     <div className="flex items-center justify-center mb-4">
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
                       <span className="ml-3 text-sm text-gray-600">
-                        {isSubmitting 
-                          ? (editingLocation?.id ? 'Memperbarui...' : 'Menyimpan...') 
+                        {isSubmitting
+                          ? (editingLocation?.id ? 'Memperbarui...' : 'Menyimpan...')
                           : 'Memproses...'
                         }
                       </span>
@@ -805,8 +851,8 @@ export default function TambahLokasiWFOPopup({
                       disabled={isSubmitting || loading}
                       className="px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                     >
-                      {isSubmitting 
-                        ? (editingLocation?.id ? 'Memperbarui...' : 'Menyimpan...') 
+                      {isSubmitting
+                        ? (editingLocation?.id ? 'Memperbarui...' : 'Menyimpan...')
                         : (editingLocation?.id ? 'Perbarui Lokasi' : 'Simpan Lokasi')
                       }
                     </button>

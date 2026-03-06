@@ -1,12 +1,13 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { PlusIcon, BuildingOfficeIcon, HomeIcon, XMarkIcon, MapPinIcon, CalendarIcon, CpuChipIcon } from "@heroicons/react/24/outline";
+import { BuildingOfficeIcon, HomeIcon, XMarkIcon, CalendarIcon } from "@heroicons/react/24/outline";
 import SearchInput from "@/components/shared/SearchInput";
 import FilterButton from "@/components/shared/FilterButton";
 import Pagination from "@/components/shared/Pagination";
 import TambahLokasiWFOPopup from "@/components/admin/TambahLokasiWFOPopup";
 import GenerateJadwalPopup from "@/components/admin/GenerateJadwalPopup";
+import api from "@/lib/api"; // Import axios instance
 
 // Simple Modal Component (tanpa Headless UI)
 interface SimpleModalProps {
@@ -32,7 +33,7 @@ function SimpleModal({ isOpen, onClose, title, subtitle, children, size = "md" }
     <>
       {/* Overlay */}
       <div 
-        className=""
+        className="fixed inset-0 bg-black bg-opacity-50 z-40"
         onClick={onClose}
       />
       
@@ -87,43 +88,72 @@ interface RekapWithSchedule {
   };
 }
 
-const generateSchedule = () => {
-  const statuses: DayStatus[] = ["WFH", "WFO", "OFF"];
-  return {
-    senin: statuses[Math.floor(Math.random() * 3)],
-    selasa: statuses[Math.floor(Math.random() * 3)],
-    rabu: statuses[Math.floor(Math.random() * 3)],
-    kamis: statuses[Math.floor(Math.random() * 3)],
-    jumat: statuses[Math.floor(Math.random() * 3)],
-    sabtu: "OFF" as DayStatus,
-    minggu: "OFF" as DayStatus,
-  };
-};
-
-const mockData: RekapWithSchedule[] = Array.from({ length: 100 }, (_, i) => ({
-  id: `CBN${234 + i}`,
-  nama: ["Bais Yufan", "Muhit Ramadhan", "Yasir", "Zulfan"][i % 4],
-  jabatan: "Frontend Developer",
-  status: "Aktif",
-  schedule: generateSchedule(),
-}));
+interface ApiResponse {
+  start_date: string;
+  end_date: string;
+  total_karyawan: number;
+  jabatan_filter: string | null;
+  data: RekapWithSchedule[];
+}
 
 export default function ManagementRekapPage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [data, setData] = useState(mockData);
+  const [data, setData] = useState<RekapWithSchedule[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [totalKaryawan, setTotalKaryawan] = useState(0);
   const [isTambahLokasiOpen, setIsTambahLokasiOpen] = useState(false);
   const [isGenerateJadwalOpen, setIsGenerateJadwalOpen] = useState(false);
   const itemsPerPage = 10;
 
+  // Fetch data from API
+  useEffect(() => {
+    fetchScheduleData();
+  }, []);
+
+  const fetchScheduleData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Using axios instance from lib/api.ts
+      const response = await api.get<ApiResponse>('/v1/schedule/all');
+      
+      setData(response.data.data);
+      setStartDate(response.data.start_date);
+      setEndDate(response.data.end_date);
+      setTotalKaryawan(response.data.total_karyawan);
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch data';
+      setError(errorMessage);
+      console.error('Error fetching schedule data:', err);
+      
+      // Jika unauthorized, redirect ke login
+      if (err.response?.status === 401) {
+        // router.push('/login'); // Uncomment jika ingin redirect
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredData = data.filter((karyawan) => {
     const q = searchQuery.toLowerCase();
-    return (
+    const matchesSearch = 
       karyawan.nama.toLowerCase().includes(q) ||
-      karyawan.id.toLowerCase().includes(q)
-    );
+      karyawan.id.toLowerCase().includes(q) ||
+      karyawan.jabatan.toLowerCase().includes(q);
+    
+    const matchesStatus = 
+      statusFilter.length === 0 || 
+      statusFilter.includes(karyawan.status);
+    
+    return matchesSearch && matchesStatus;
   });
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
@@ -132,11 +162,12 @@ export default function ManagementRekapPage() {
     currentPage * itemsPerPage
   );
 
-  const handleScheduleChange = (
+  const handleScheduleChange = async (
     karyawanId: string,
     day: keyof RekapWithSchedule["schedule"],
     newStatus: DayStatus
   ) => {
+    // Update local state immediately for better UX
     setData((prevData) =>
       prevData.map((karyawan) =>
         karyawan.id === karyawanId
@@ -150,6 +181,19 @@ export default function ManagementRekapPage() {
           : karyawan
       )
     );
+
+    // TODO: Send update to API (uncomment when endpoint is available)
+    // try {
+    //   await api.put('/v1/schedule/update', {
+    //     karyawan_id: karyawanId,
+    //     day: day,
+    //     status: newStatus
+    //   });
+    // } catch (err) {
+    //   console.error('Error updating schedule:', err);
+    //   // Revert the change if API call fails
+    //   fetchScheduleData();
+    // }
   };
 
   // Render schedule cell dengan dropdown lebih compact
@@ -193,8 +237,87 @@ export default function ManagementRekapPage() {
     );
   };
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Memuat data jadwal...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+        <div className="flex items-center gap-3">
+          <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div>
+            <h3 className="font-semibold text-red-900">Error Loading Data</h3>
+            <p className="text-sm text-red-700 mt-1">{error}</p>
+            {error.includes('Unauthorized') && (
+              <p className="text-xs text-red-600 mt-2">
+                Silakan login kembali untuk mengakses halaman ini.
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="flex gap-3 mt-4">
+          <button
+            onClick={fetchScheduleData}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+          >
+            Coba Lagi
+          </button>
+          {error.includes('Unauthorized') && (
+            <button
+              onClick={() => router.push('/login')}
+              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
+            >
+              Ke Halaman Login
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 max-w-full overflow-hidden">
+      {/* Header with Date Range Info */}
+      {startDate && endDate && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <CalendarIcon className="w-5 h-5 text-blue-600" />
+              <div>
+                <p className="text-sm font-medium text-blue-900">Periode Jadwal</p>
+                <p className="text-xs text-blue-700 mt-0.5">
+                  {new Date(startDate).toLocaleDateString('id-ID', { 
+                    day: 'numeric', 
+                    month: 'long', 
+                    year: 'numeric' 
+                  })} - {new Date(endDate).toLocaleDateString('id-ID', { 
+                    day: 'numeric', 
+                    month: 'long', 
+                    year: 'numeric' 
+                  })}
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-medium text-blue-900">Total Karyawan</p>
+              <p className="text-2xl font-bold text-blue-600">{totalKaryawan}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header with Panduan */}
       <div className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-blue-600">
         <div className="flex items-start gap-3">
@@ -233,16 +356,15 @@ export default function ManagementRekapPage() {
             <SearchInput
               value={searchQuery}
               onChange={setSearchQuery}
-              placeholder="Cari Nama Karyawan atau Jenis Industri"
+              placeholder="Cari Nama Karyawan, ID, atau Jabatan"
             />
           </div>
           <div className="flex items-center gap-3">
             <FilterButton
               label="Pilih Status"
               options={[
-                { label: "Kontrak", value: "Kontrak" },
-                { label: "Karyawan Tetap", value: "Karyawan Tetap" },
-                { label: "Magang", value: "Magang" },
+                { label: "Aktif", value: "Aktif" },
+                { label: "Nonaktif", value: "Nonaktif" },
               ]}
               value={statusFilter}
               onChange={setStatusFilter}
@@ -267,112 +389,132 @@ export default function ManagementRekapPage() {
 
       {/* Custom Table */}
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="overflow-x-auto max-w-full">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                  ID
-                </th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                  Nama Karyawan
-                </th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                  
-                </th>
-                <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                  Senin
-                </th>
-                <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                  Selasa
-                </th>
-                <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                  Rabu
-                </th>
-                <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                  Kamis
-                </th>
-                <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                  Jum'at
-                </th>
-                <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                  Sabtu
-                </th>
-                <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                  Minggu
-                </th>
-                <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                  Aksi
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {paginatedData.map((karyawan) => (
-                <tr
-                  key={karyawan.id}
-                  className="hover:bg-gray-50 cursor-pointer transition-colors"
-                  onClick={() => router.push(`/admin/karyawan/${karyawan.id}`)}
-                >
-                  <td className="px-3 py-3 whitespace-nowrap">
-                    <span className="font-medium text-gray-900 text-sm">{karyawan.id}</span>
-                  </td>
-                  <td className="px-3 py-3 whitespace-nowrap">
-                    <div className="flex flex-col gap-0.5">
-                      <div className="font-medium text-gray-900 text-sm">{karyawan.nama}</div>
-                      <div className="text-xs text-gray-500">{karyawan.jabatan}</div>
-                    </div>
-                  </td>
-                  <td className="px-3 py-3 whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700">
-                      <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                      Aktif
-                    </span>
-                  </td>
-                  <td className="px-2 py-3 whitespace-nowrap">
-                    {renderScheduleCell(karyawan, "senin")}
-                  </td>
-                  <td className="px-2 py-3 whitespace-nowrap">
-                    {renderScheduleCell(karyawan, "selasa")}
-                  </td>
-                  <td className="px-2 py-3 whitespace-nowrap">
-                    {renderScheduleCell(karyawan, "rabu")}
-                  </td>
-                  <td className="px-2 py-3 whitespace-nowrap">
-                    {renderScheduleCell(karyawan, "kamis")}
-                  </td>
-                  <td className="px-2 py-3 whitespace-nowrap">
-                    {renderScheduleCell(karyawan, "jumat")}
-                  </td>
-                  <td className="px-2 py-3 whitespace-nowrap">
-                    {renderScheduleCell(karyawan, "sabtu")}
-                  </td>
-                  <td className="px-2 py-3 whitespace-nowrap">
-                    {renderScheduleCell(karyawan, "minggu")}
-                  </td>
-                  <td className="px-2 py-3 whitespace-nowrap text-center">
-                    <button 
-                      className="text-gray-400 hover:text-gray-600" 
-                      onClick={(e) => e.stopPropagation()}
+        {paginatedData.length === 0 ? (
+          <div className="text-center py-12">
+            <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <p className="text-gray-600 font-medium">Tidak ada data karyawan</p>
+            <p className="text-sm text-gray-500 mt-1">
+              {searchQuery ? "Coba ubah kata kunci pencarian" : "Belum ada jadwal yang tersedia"}
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto max-w-full">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                      ID
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                      Nama Karyawan
+                    </th>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                      Status
+                    </th>
+                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                      Senin
+                    </th>
+                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                      Selasa
+                    </th>
+                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                      Rabu
+                    </th>
+                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                      Kamis
+                    </th>
+                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                      Jum'at
+                    </th>
+                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                      Sabtu
+                    </th>
+                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                      Minggu
+                    </th>
+                    <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                      Aksi
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {paginatedData.map((karyawan) => (
+                    <tr
+                      key={karyawan.id}
+                      className="hover:bg-gray-50 cursor-pointer transition-colors"
+                      onClick={() => router.push(`/admin/karyawan/${karyawan.id}`)}
                     >
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
-                      </svg>
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                      <td className="px-3 py-3 whitespace-nowrap">
+                        <span className="font-medium text-gray-900 text-sm">{karyawan.id}</span>
+                      </td>
+                      <td className="px-3 py-3 whitespace-nowrap">
+                        <div className="flex flex-col gap-0.5">
+                          <div className="font-medium text-gray-900 text-sm">{karyawan.nama}</div>
+                          <div className="text-xs text-gray-500">{karyawan.jabatan}</div>
+                        </div>
+                      </td>
+                      <td className="px-3 py-3 whitespace-nowrap">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                          karyawan.status === "Aktif" 
+                            ? "bg-green-50 text-green-700" 
+                            : "bg-gray-50 text-gray-700"
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${
+                            karyawan.status === "Aktif" ? "bg-green-500" : "bg-gray-500"
+                          }`}></span>
+                          {karyawan.status}
+                        </span>
+                      </td>
+                      <td className="px-2 py-3 whitespace-nowrap">
+                        {renderScheduleCell(karyawan, "senin")}
+                      </td>
+                      <td className="px-2 py-3 whitespace-nowrap">
+                        {renderScheduleCell(karyawan, "selasa")}
+                      </td>
+                      <td className="px-2 py-3 whitespace-nowrap">
+                        {renderScheduleCell(karyawan, "rabu")}
+                      </td>
+                      <td className="px-2 py-3 whitespace-nowrap">
+                        {renderScheduleCell(karyawan, "kamis")}
+                      </td>
+                      <td className="px-2 py-3 whitespace-nowrap">
+                        {renderScheduleCell(karyawan, "jumat")}
+                      </td>
+                      <td className="px-2 py-3 whitespace-nowrap">
+                        {renderScheduleCell(karyawan, "sabtu")}
+                      </td>
+                      <td className="px-2 py-3 whitespace-nowrap">
+                        {renderScheduleCell(karyawan, "minggu")}
+                      </td>
+                      <td className="px-2 py-3 whitespace-nowrap text-center">
+                        <button 
+                          className="text-gray-400 hover:text-gray-600" 
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
+                          </svg>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-        {/* Pagination */}
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalItems={filteredData.length}
-          itemsPerPage={itemsPerPage}
-          onPageChange={setCurrentPage}
-        />
+            {/* Pagination */}
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredData.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+            />
+          </>
+        )}
       </div>
 
       {/* Popup Components */}
@@ -383,7 +525,11 @@ export default function ManagementRekapPage() {
       
       <GenerateJadwalPopup
         isOpen={isGenerateJadwalOpen} 
-        onClose={() => setIsGenerateJadwalOpen(false)} 
+        onClose={() => {
+          setIsGenerateJadwalOpen(false);
+          // Refresh data after generating schedule
+          fetchScheduleData();
+        }} 
       />
     </div>
   );

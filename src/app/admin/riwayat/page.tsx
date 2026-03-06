@@ -127,13 +127,13 @@ export default function ManagementRekapPage() {
               onChange={setStatusFilter}
             />
             <ExportButton onExport={handleExport} />
-            <button
+            {/* <button
               onClick={() => router.push("/admin/karyawan/create")}
               className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
             >
               <PlusIcon className="w-5 h-5" />
               Tambah Karyawan
-            </button>
+            </button> */}
           </div>
         </div>
       </div>

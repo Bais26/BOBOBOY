@@ -1,15 +1,16 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { useRouter } from "next/navigation";
-import { BuildingOfficeIcon, HomeIcon, XMarkIcon, CalendarIcon } from "@heroicons/react/24/outline";
+import { BuildingOfficeIcon, HomeIcon, XMarkIcon, CalendarIcon, EllipsisVerticalIcon, PencilSquareIcon } from "@heroicons/react/24/outline";
+import { Menu, Transition } from '@headlessui/react';
 import SearchInput from "@/components/shared/SearchInput";
 import FilterButton from "@/components/shared/FilterButton";
 import Pagination from "@/components/shared/Pagination";
 import TambahLokasiWFOPopup from "@/components/admin/TambahLokasiWFOPopup";
 import GenerateJadwalPopup from "@/components/admin/GenerateJadwalPopup";
+import ScheduleEditModal from "@/components/admin/ScheduleEditModal";
 import api from "@/lib/api"; // Import axios instance
 
-// Simple Modal Component (tanpa Headless UI)
 interface SimpleModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -73,7 +74,8 @@ function SimpleModal({ isOpen, onClose, title, subtitle, children, size = "md" }
 type DayStatus = "WFH" | "WFO" | "OFF";
 
 interface RekapWithSchedule {
-  id: string;
+  employeeCode: string; // This is the short ID like CBN004
+  user_id: string; // The UUID for the user/employee
   nama: string;
   jabatan: string;
   status: "Aktif" | "Nonaktif";
@@ -109,6 +111,7 @@ export default function ManagementRekapPage() {
   const [totalKaryawan, setTotalKaryawan] = useState(0);
   const [isTambahLokasiOpen, setIsTambahLokasiOpen] = useState(false);
   const [isGenerateJadwalOpen, setIsGenerateJadwalOpen] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<RekapWithSchedule | null>(null);
   const itemsPerPage = 10;
 
   // Fetch data from API
@@ -146,7 +149,7 @@ export default function ManagementRekapPage() {
     const q = searchQuery.toLowerCase();
     const matchesSearch = 
       karyawan.nama.toLowerCase().includes(q) ||
-      karyawan.id.toLowerCase().includes(q) ||
+      karyawan.employeeCode.toLowerCase().includes(q) ||
       karyawan.jabatan.toLowerCase().includes(q);
     
     const matchesStatus = 
@@ -162,77 +165,34 @@ export default function ManagementRekapPage() {
     currentPage * itemsPerPage
   );
 
-  const handleScheduleChange = async (
-    karyawanId: string,
-    day: keyof RekapWithSchedule["schedule"],
-    newStatus: DayStatus
-  ) => {
-    // Update local state immediately for better UX
-    setData((prevData) =>
-      prevData.map((karyawan) =>
-        karyawan.id === karyawanId
-          ? {
-              ...karyawan,
-              schedule: {
-                ...karyawan.schedule,
-                [day]: newStatus,
-              },
-            }
-          : karyawan
-      )
-    );
-
-    // TODO: Send update to API (uncomment when endpoint is available)
-    // try {
-    //   await api.put('/v1/schedule/update', {
-    //     karyawan_id: karyawanId,
-    //     day: day,
-    //     status: newStatus
-    //   });
-    // } catch (err) {
-    //   console.error('Error updating schedule:', err);
-    //   // Revert the change if API call fails
-    //   fetchScheduleData();
-    // }
+  const handleOpenEditModal = (karyawan: RekapWithSchedule) => {
+    setEditingEmployee(karyawan);
   };
 
-  // Render schedule cell dengan dropdown lebih compact
+  const handleCloseEditModal = () => {
+    setEditingEmployee(null);
+    // Refresh data jika ada perubahan dari modal
+    fetchScheduleData();
+  };
+
+  // Render schedule cell (hanya tampilan)
   const renderScheduleCell = (
     karyawan: RekapWithSchedule,
     day: keyof RekapWithSchedule["schedule"]
   ) => {
     const status = karyawan.schedule[day];
-    
+    const baseClasses = "flex items-center justify-center gap-1.5 rounded px-2 py-1 text-xs font-medium min-w-[70px]";
+    const statusClasses = {
+      WFH: "bg-blue-50 text-blue-700",
+      WFO: "bg-green-50 text-green-700",
+      OFF: "bg-gray-50 text-gray-500",
+    };
+
     return (
-      <div className="flex items-center justify-center">
-        <div className="relative inline-block">
-          <select
-            value={status}
-            onChange={(e) =>
-              handleScheduleChange(karyawan.id, day, e.target.value as DayStatus)
-            }
-            className={`
-              appearance-none cursor-pointer border rounded px-2 py-1 pr-6 text-xs font-medium min-w-[70px]
-              ${status === "WFH" ? "bg-blue-50 text-blue-700 border-blue-200" : ""}
-              ${status === "WFO" ? "bg-green-50 text-green-700 border-green-200" : ""}
-              ${status === "OFF" ? "bg-gray-50 text-gray-500 border-gray-200" : ""}
-              hover:opacity-80 transition-opacity focus:outline-none focus:ring-1
-              ${status === "WFH" ? "focus:ring-blue-400" : ""}
-              ${status === "WFO" ? "focus:ring-green-400" : ""}
-              ${status === "OFF" ? "focus:ring-gray-300" : ""}
-            `}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <option value="WFH">WFH</option>
-            <option value="WFO">WFO</option>
-            <option value="OFF">OFF</option>
-          </select>
-          <div className="absolute inset-y-0 right-0 flex items-center pr-1.5 pointer-events-none">
-            {status === "WFH" && <HomeIcon className="w-3.5 h-3.5 text-blue-700" />}
-            {status === "WFO" && <BuildingOfficeIcon className="w-3.5 h-3.5 text-green-700" />}
-            {status === "OFF" && <span className="text-gray-400 text-xs">-</span>}
-          </div>
-        </div>
+      <div className={`${baseClasses} ${statusClasses[status]}`}>
+        {status === "WFH" && <HomeIcon className="w-3.5 h-3.5" />}
+        {status === "WFO" && <BuildingOfficeIcon className="w-3.5 h-3.5" />}
+        <span>{status}</span>
       </div>
     );
   };
@@ -443,12 +403,12 @@ export default function ManagementRekapPage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {paginatedData.map((karyawan) => (
                     <tr
-                      key={karyawan.id}
+                      key={karyawan.user_id}
                       className="hover:bg-gray-50 cursor-pointer transition-colors"
-                      onClick={() => router.push(`/admin/karyawan/${karyawan.id}`)}
+                      onClick={() => router.push(`/admin/karyawan/${karyawan.employeeCode}`)}
                     >
                       <td className="px-3 py-3 whitespace-nowrap">
-                        <span className="font-medium text-gray-900 text-sm">{karyawan.id}</span>
+                        <span className="font-medium text-gray-900 text-sm">{karyawan.employeeCode}</span>
                       </td>
                       <td className="px-3 py-3 whitespace-nowrap">
                         <div className="flex flex-col gap-0.5">
@@ -490,14 +450,41 @@ export default function ManagementRekapPage() {
                         {renderScheduleCell(karyawan, "minggu")}
                       </td>
                       <td className="px-2 py-3 whitespace-nowrap text-center">
-                        <button 
-                          className="text-gray-400 hover:text-gray-600" 
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
-                          </svg>
-                        </button>
+                        <Menu as="div" className="relative inline-block text-left">
+                          <div>
+                            <Menu.Button 
+                              className="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <EllipsisVerticalIcon className="h-5 w-5" />
+                            </Menu.Button>
+                          </div>
+                          <Transition
+                            as={Fragment}
+                            enter="transition ease-out duration-100"
+                            enterFrom="transform opacity-0 scale-95"
+                            enterTo="transform opacity-100 scale-100"
+                            leave="transition ease-in duration-75"
+                            leaveFrom="transform opacity-100 scale-100"
+                            leaveTo="transform opacity-0 scale-95"
+                          >
+                            <Menu.Items className="absolute right-0 mt-2 w-48 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
+                              <div className="px-1 py-1">
+                                <Menu.Item>
+                                  {({ active }) => (
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleOpenEditModal(karyawan); }}
+                                      className={`${active ? 'bg-blue-500 text-white' : 'text-gray-900'} group flex w-full items-center rounded-md px-2 py-2 text-sm`}
+                                    >
+                                      <PencilSquareIcon className="mr-2 h-5 w-5" />
+                                      Edit Jadwal
+                                    </button>
+                                  )}
+                                </Menu.Item>
+                              </div>
+                            </Menu.Items>
+                          </Transition>
+                        </Menu>
                       </td>
                     </tr>
                   ))}
@@ -521,6 +508,16 @@ export default function ManagementRekapPage() {
       <TambahLokasiWFOPopup
         isOpen={isTambahLokasiOpen} 
         onClose={() => setIsTambahLokasiOpen(false)} 
+      />
+
+      <ScheduleEditModal
+        isOpen={!!editingEmployee}
+        onClose={handleCloseEditModal}
+        employee={editingEmployee ? { 
+            employeeCode: editingEmployee.employeeCode, 
+            userId: editingEmployee.user_id, 
+            name: editingEmployee.nama 
+        } : null}
       />
       
       <GenerateJadwalPopup

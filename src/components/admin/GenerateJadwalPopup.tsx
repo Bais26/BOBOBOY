@@ -1,3 +1,5 @@
+'use client'
+
 import { Fragment, useState, useEffect } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
 import { XMarkIcon, CalendarIcon, CpuChipIcon, InformationCircleIcon } from '@heroicons/react/24/outline'

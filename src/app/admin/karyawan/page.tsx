@@ -16,12 +16,14 @@ import Swal from "sweetalert2";
 
 export default function ManagementKaryawanPage() {
   const router = useRouter();
-  const [data, setData] = useState<Karyawan[]>([]);
+  const [karyawanList, setKaryawanList] = useState<Karyawan[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [departemenFilter, setDepartemenFilter] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const itemsPerPage = 10;
 
   const fetchData = async () => {
@@ -34,9 +36,14 @@ export default function ManagementKaryawanPage() {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // ✅ Pastikan data berupa array
-      const karyawanArray = Array.isArray(res.data) ? res.data : res.data.data || [];
-      setData(karyawanArray);
+      // ✅ Sesuaikan dengan struktur API { data: [], pagination: {} }
+      const responseData = res.data;
+      const karyawanArray = responseData.data || [];
+      setKaryawanList(karyawanArray);
+
+      // Set pagination data if available
+      setTotalPages(responseData.pagination?.total_pages || 1);
+      setTotalItems(responseData.pagination?.total || 0);
     } catch (err: any) {
       console.error(err);
       Swal.fire({
@@ -55,27 +62,27 @@ export default function ManagementKaryawanPage() {
   }, []);
 
   // Filter data
-  const filteredData = data.filter((karyawan) => {
-    const nama = karyawan.nama || karyawan.full_name || ""; // fallback
+  const filteredData = karyawanList.filter((karyawan) => {
+    // Gunakan properti dari API response yang baru
+    const nama = karyawan.full_name || "";
     const email = karyawan.email || "";
     const id = karyawan.id || "";
 
     const matchesSearch =
       nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
       email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      id.toLowerCase().includes(searchQuery.toLowerCase());
+      String(id).toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesStatus =
-      statusFilter.length === 0 || statusFilter.includes(karyawan.statusKaryawan);
+      statusFilter.length === 0 || statusFilter.includes(karyawan.karyawan_detail?.status ?? '');
     const matchesDepartemen =
-      departemenFilter.length === 0 || departemenFilter.includes(karyawan.departemen);
+      departemenFilter.length === 0 || departemenFilter.includes(karyawan.karyawan_detail?.division?.name ?? '');
 
     return matchesSearch && matchesStatus && matchesDepartemen;
   });
 
 
   // Pagination
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
   const paginatedData = filteredData.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
@@ -133,13 +140,13 @@ export default function ManagementKaryawanPage() {
     // { header: "ID", accessor: "id" as keyof Karyawan },
     { header: "NAMA KARYAWAN", accessor: "full_name" as keyof Karyawan },
     { header: "EMAIL", accessor: "email" as keyof Karyawan },
-    { header: "DEPARTEMEN", accessor: "departemen" as keyof Karyawan },
+    { header: "DEPARTEMEN", accessor: ((row: Karyawan) => row.karyawan_detail?.division?.name ?? '-') as any },
     {
       header: "STATUS KARYAWAN",
       accessor: ((row: Karyawan) => (
         <StatusBadge
-          status={row.statusKaryawan}
-          variant={getStatusVariant(row.statusKaryawan)}
+          status={row.karyawan_detail?.status ?? 'Tidak Diketahui'}
+          variant={getStatusVariant(row.karyawan_detail?.status as StatusKaryawan)}
         />
       )) as any,
     },
@@ -147,8 +154,8 @@ export default function ManagementKaryawanPage() {
       header: "STATUS",
       accessor: ((row: Karyawan) => (
         <StatusBadge
-          status={row.status}
-          variant={row.status === "Aktif" ? "aktif" : "nonaktif"}
+          status={row.is_active ? 'Aktif' : 'Nonaktif'}
+          variant={row.is_active ? "aktif" : "nonaktif"}
         />
       )) as any,
     },
@@ -218,7 +225,7 @@ export default function ManagementKaryawanPage() {
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}
-              totalItems={filteredData.length}
+              totalItems={totalItems}
               itemsPerPage={itemsPerPage}
               onPageChange={setCurrentPage}
             />

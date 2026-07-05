@@ -52,11 +52,6 @@ export function LoginForm() {
         router.replace("/login");
       }
 
-
-      setTimeout(() => {
-        window.location.reload();
-      }, 300);
-
     } catch (error: any) {
       console.error("❌ Login failed:", error?.response?.data || error);
 

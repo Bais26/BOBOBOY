@@ -48,62 +48,62 @@ export default function ScheduleEditModal({ isOpen, onClose, employee }: Schedul
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const fetchSchedule = async (userId: string, date: Date) => {
-    setIsLoading(true);
-    let isDataFound = false;
-    try {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
+  setIsLoading(true);
+  let isDataFound = false;
+  try {
+    // Hitung tanggal awal dan akhir bulan
+    const year = date.getFullYear();
+    const month = date.getMonth(); // 0-indexed
+    const startOfMonth = new Date(year, month, 1);
+    const endOfMonth = new Date(year, month + 1, 0); // hari terakhir bulan itu
 
-      const response = await api.get(`/v1/schedule/${userId}`, {
-        params: { month, year },
-      });
-      
-      // Robust data parsing: ensure we get an array
-      let scheduleData = [];
-      if (Array.isArray(response.data)) {
-        scheduleData = response.data;
-      } else if (response.data && typeof response.data === 'object') {
-        scheduleData = response.data.data || response.data.schedules || response.data.detail_schedule || [];
-      }
-      
-      if (Array.isArray(scheduleData) && scheduleData.length > 0) {
-        const formattedEvents: ScheduleEvent[] = scheduleData
-          .filter((item: { date?: string; status?: DayStatus }) => item.date && item.status) // Filter out incomplete items
-          .map((item: { date: string; status: DayStatus }) => ({
-            title: item.status,
-            start: item.date,
-            allDay: true,
-            color: STATUS_COLORS[item.status],
-          }));
+    const formatDate = (d: Date) => d.toISOString().split('T')[0]; // "YYYY-MM-DD"
 
-        setEvents(formattedEvents);
-        setInitialEvents(JSON.parse(JSON.stringify(formattedEvents)));
-        isDataFound = true;
-      } else {
-        // If API returns success but no data, clear the events
-        setEvents([]);
-        setInitialEvents([]);
-      }
+    const response = await api.get(`/v1/schedule/${userId}`, {
+      params: {
+        start_date: formatDate(startOfMonth),
+        end_date: formatDate(endOfMonth),
+      },
+    });
 
-    } catch (error) {
-      console.error("Failed to fetch schedule", error);
-      Swal.fire('Error', 'Gagal memuat jadwal. Periksa koneksi atau coba lagi nanti.', 'error');
-    } finally {
-      setIsLoading(false);
-      // Give feedback to the user if the calendar is empty
-      if (!isDataFound && isOpen) {
-        setTimeout(() => {
-          Swal.fire({
-            title: 'Informasi',
-            text: 'Jadwal untuk bulan ini belum tersedia atau masih kosong.',
-            icon: 'info',
-            timer: 3000,
-            showConfirmButton: false,
-          });
-        }, 500); // Delay slightly to not overlap with loading state
-      }
+    const scheduleData = response.data?.detail_schedule || [];
+
+    if (Array.isArray(scheduleData) && scheduleData.length > 0) {
+      const formattedEvents: ScheduleEvent[] = scheduleData
+        .filter((item: any) => item.tanggal && item.work_status)
+        .map((item: any) => ({
+          title: item.work_status as DayStatus,
+          start: item.tanggal.split('T')[0],
+          allDay: true,
+          color: STATUS_COLORS[item.work_status as DayStatus],
+        }));
+
+      setEvents(formattedEvents);
+      setInitialEvents(JSON.parse(JSON.stringify(formattedEvents)));
+      isDataFound = formattedEvents.length > 0;
+    } else {
+      setEvents([]);
+      setInitialEvents([]);
     }
-  };
+
+  } catch (error) {
+    console.error("Failed to fetch schedule", error);
+    Swal.fire('Error', 'Gagal memuat jadwal. Periksa koneksi atau coba lagi nanti.', 'error');
+  } finally {
+    setIsLoading(false);
+    if (!isDataFound && isOpen) {
+      setTimeout(() => {
+        Swal.fire({
+          title: 'Informasi',
+          text: 'Jadwal untuk bulan ini belum tersedia atau masih kosong.',
+          icon: 'info',
+          timer: 3000,
+          showConfirmButton: false,
+        });
+      }, 500);
+    }
+  }
+};
 
   useEffect(() => {
     if (employee && isOpen) {

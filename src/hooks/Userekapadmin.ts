@@ -89,9 +89,8 @@ export function useRekapAdmin(): UseRekapAdminReturn {
       const params: RekapQueryParams = {
         page: currentPage,
         limit: ITEMS_PER_PAGE,
-        filter: filterType,
         year,
-        ...(filterType === "month" && month ? { month } : {}),
+        ...(month && { filter: "month", month }),
         ...(debouncedSearch ? { nama_lengkap: debouncedSearch } : {}),
         ...(workStatus ? { work_status: workStatus } : {}),
       };
@@ -102,7 +101,7 @@ export function useRekapAdmin(): UseRekapAdminReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, filterType, year, month, debouncedSearch, workStatus]);
+  }, [currentPage, year, month, debouncedSearch, workStatus]);
 
   useEffect(() => {
     load();

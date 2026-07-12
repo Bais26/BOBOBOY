@@ -19,29 +19,33 @@ export default function ManagementKaryawanPage() {
   const [karyawanList, setKaryawanList] = useState<Karyawan[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [departemenFilter, setDepartemenFilter] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const itemsPerPage = 10;
 
-  const fetchData = async () => {
+  const fetchData = async (page: number = 1) => {
     setLoading(true);
     try {
       const token = localStorage.getItem("access_token");
       if (!token) throw new Error("Token tidak ditemukan");
 
-      const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/v1/karyawan/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/v1/karyawan/`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          params: {
+            page, // <-- ini yang bikin request jadi ?page=2, ?page=3 dst
+            limit: itemsPerPage,
+          },
+        },
+      );
 
-      // ✅ Sesuaikan dengan struktur API { data: [], pagination: {} }
       const responseData = res.data;
       const karyawanArray = responseData.data || [];
       setKaryawanList(karyawanArray);
 
-      // Set pagination data if available
       setTotalPages(responseData.pagination?.total_pages || 1);
       setTotalItems(responseData.pagination?.total || 0);
     } catch (err: any) {
@@ -56,10 +60,9 @@ export default function ManagementKaryawanPage() {
     }
   };
 
-
   useEffect(() => {
-    fetchData();
-  }, []);
+    fetchData(currentPage);
+  }, [currentPage]);
 
   // Filter data
   const filteredData = karyawanList.filter((karyawan) => {
@@ -73,20 +76,13 @@ export default function ManagementKaryawanPage() {
       email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       String(id).toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesStatus =
-      statusFilter.length === 0 || statusFilter.includes(karyawan.karyawan_detail?.status ?? '');
     const matchesDepartemen =
-      departemenFilter.length === 0 || departemenFilter.includes(karyawan.karyawan_detail?.division?.name ?? '');
+      departemenFilter.length === 0 ||
+      departemenFilter.includes(karyawan.karyawan_detail?.division?.name ?? "");
 
-    return matchesSearch && matchesStatus && matchesDepartemen;
+    return matchesSearch && matchesDepartemen;
   });
 
-
-  // Pagination
-  const paginatedData = filteredData.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
 
   const handleExport = (format: "pdf" | "excel") => {
     console.log(`Exporting as ${format}`);
@@ -109,9 +105,12 @@ export default function ManagementKaryawanPage() {
       const token = localStorage.getItem("access_token");
       if (!token) throw new Error("Token tidak ditemukan");
 
-      await axios.delete(`${process.env.NEXT_PUBLIC_API_URL}/v1/karyawan/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axios.delete(
+        `${process.env.NEXT_PUBLIC_API_URL}/v1/karyawan/${id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
 
       Swal.fire({
         icon: "success",
@@ -130,7 +129,9 @@ export default function ManagementKaryawanPage() {
     }
   };
 
-  const getStatusVariant = (status: StatusKaryawan): "kontrak" | "tetap" | "magang" => {
+  const getStatusVariant = (
+    status: StatusKaryawan,
+  ): "kontrak" | "tetap" | "magang" => {
     if (status === "Kontrak") return "kontrak";
     if (status === "Karyawan Tetap") return "tetap";
     return "magang";
@@ -140,24 +141,13 @@ export default function ManagementKaryawanPage() {
     // { header: "ID", accessor: "id" as keyof Karyawan },
     { header: "NAMA KARYAWAN", accessor: "full_name" as keyof Karyawan },
     { header: "EMAIL", accessor: "email" as keyof Karyawan },
-    { header: "DEPARTEMEN", accessor: ((row: Karyawan) => row.karyawan_detail?.division?.name ?? '-') as any },
     {
-      header: "STATUS KARYAWAN",
-      accessor: ((row: Karyawan) => (
-        <StatusBadge
-          status={row.karyawan_detail?.status ?? 'Tidak Diketahui'}
-          variant={getStatusVariant(row.karyawan_detail?.status as StatusKaryawan)}
-        />
-      )) as any,
+      header: "DIVISI",
+      accessor: (row: Karyawan) => row.karyawan_detail?.subdivision?.division?.name ?? "-",
     },
     {
-      header: "STATUS",
-      accessor: ((row: Karyawan) => (
-        <StatusBadge
-          status={row.is_active ? 'Aktif' : 'Nonaktif'}
-          variant={row.is_active ? "aktif" : "nonaktif"}
-        />
-      )) as any,
+      header: "SUBDIVISI",
+      accessor: (row: Karyawan) => row.karyawan_detail?.subdivision?.name ?? "-",
     },
     {
       header: "AKSI",
@@ -183,6 +173,15 @@ export default function ManagementKaryawanPage() {
     },
   ];
 
+  // Opsi statis untuk filter divisi
+  const departemenOptions = [
+    { label: "Finance", value: "Finance" },
+    { label: "IT", value: "IT" },
+    { label: "HRD", value: "HRD" },
+    { label: "Product Development", value: "Product Development" },
+    { label: "Business Development", value: "Business Development" },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Filters and Actions */}
@@ -197,14 +196,10 @@ export default function ManagementKaryawanPage() {
           </div>
           <div className="flex items-center gap-3">
             <FilterButton
-              label="Pilih Status"
-              options={[
-                { label: "Kontrak", value: "Kontrak" },
-                { label: "Karyawan Tetap", value: "Karyawan Tetap" },
-                { label: "Magang", value: "Magang" },
-              ]}
-              value={statusFilter}
-              onChange={setStatusFilter}
+              label="Pilih Divisi"
+              options={departemenOptions}
+              value={departemenFilter}
+              onChange={setDepartemenFilter}
             />
             <ExportButton onExport={handleExport} />
           </div>
@@ -219,7 +214,7 @@ export default function ManagementKaryawanPage() {
           <>
             <Table
               columns={columns}
-              data={paginatedData}
+              data={filteredData}
               onRowClick={(row) => router.push(`/admin/karyawan/${row.id}`)}
             />
             <Pagination

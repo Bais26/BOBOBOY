@@ -7,8 +7,6 @@ interface DataDiriSectionProps {
   namaBelakang: string;
   tanggalLahir: string;
   jenisKelamin: string;
-  tinggiBadan: string;
-  beratBadan: string;
 }
 
 export default function DataDiriSection({
@@ -16,8 +14,6 @@ export default function DataDiriSection({
   namaBelakang,
   tanggalLahir,
   jenisKelamin,
-  tinggiBadan,
-  beratBadan,
 }: DataDiriSectionProps) {
   return (
     <InfoCard title="Data Diri" icon={<UserIcon className="w-5 h-5" />}>
@@ -26,8 +22,6 @@ export default function DataDiriSection({
         <InfoRow label="Nama Belakang" value={namaBelakang} />
         <InfoRow label="Tanggal Lahir" value={tanggalLahir} />
         <InfoRow label="Jenis Kelamin" value={jenisKelamin} />
-        <InfoRow label="Tinggi Badan" value={tinggiBadan} />
-        <InfoRow label="Berat Badan" value={beratBadan} />
       </div>
     </InfoCard>
   );

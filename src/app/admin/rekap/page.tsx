@@ -105,11 +105,13 @@ export default function ManagementRekapPage() {
     <div className="space-y-6">
       {/* Summary Cards */}
       {data?.summary && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
           {[
             { label: "Total Hadir", value: data.summary.total_hadir },
             { label: "Terlambat", value: data.summary.total_terlambat },
             { label: "Total Alfa", value: data.summary.total_alfa },
+            { label: "Total WFO", value: data.summary.total_wfo },
+            { label: "Total WFH", value: data.summary.total_wfh },
           ].map((c) => (
             <div
               key={c.label}

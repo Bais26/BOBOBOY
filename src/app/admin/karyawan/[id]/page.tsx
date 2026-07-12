@@ -9,7 +9,7 @@ import ProfileHeader from '@/components/shared/ProfileHeader';
 import DataDiriSection from '@/components/karyawan/DataDiriSection';
 import AlamatSection from '@/components/karyawan/AlamatSection';
 import KontakDaruratSection from '@/components/karyawan/KontakDaruratSection';
-import RekeningBankSection from '@/components/karyawan/RekeningBankSection';
+// import RekeningBankSection from '@/components/karyawan/RekeningBankSection'; // Removed
 import { KaryawanProfile } from '@/types/profil';
 
 export default function ProfilKaryawanPage() {
@@ -40,7 +40,7 @@ export default function ProfilKaryawanPage() {
           id: res.data.id || karyawanId,
           nama: res.data.full_name,
           email: res.data.email || '-',
-          jabatan: res.data.posisi || '-',
+          jabatan: res.data.karyawan_detail?.subdivision?.name || '-',
           statusKaryawan: res.data.karyawan_detail?.status_karyawan || '-',
           masukKantor: res.data.karyawan_detail?.tanggal_masuk || '-',
           status: res.data.karyawan_detail?.status || '-',
@@ -49,8 +49,8 @@ export default function ProfilKaryawanPage() {
           namaBelakang: res.data.karyawan_detail?.nama_belakang || '-',
           tanggalLahir: res.data.karyawan_detail?.tanggal_lahir || '-',
           jenisKelamin: res.data.karyawan_detail?.jenis_kelamin || '-',
-          tinggiBadan: res.data.karyawan_detail?.tinggi_badan || '-',
-          beratBadan: res.data.karyawan_detail?.berat_badan || '-',
+          // tinggiBadan: res.data.karyawan_detail?.tinggi_badan || '-', // Removed
+          // beratBadan: res.data.karyawan_detail?.berat_badan || '-', // Removed
 
           namaAlamat: res.data.karyawan_detail?.nama_alamat || '-',
           pinLokasi: res.data.karyawan_detail?.pin_lokasi || { lat: 0, lng: 0 },
@@ -63,12 +63,12 @@ export default function ProfilKaryawanPage() {
             nomorTelepon: res.data.karyawan_detail?.nomor_telepon_darurat || '-',
           },
 
-          rekening: {
-            namaBank: res.data.karyawan_detail?.nama_bank || '-',
-            namaRekening: res.data.karyawan_detail?.nama_rekening || '-',
-            nomorRekening: res.data.karyawan_detail?.nomor_rekening || '-',
-            namaPemilikRekening: res.data.karyawan_detail?.nama_pemilik_rekening || '-',
-          },
+          // rekening: { // Removed
+          //   namaBank: res.data.karyawan_detail?.nama_bank || '-',
+          //   namaRekening: res.data.karyawan_detail?.nama_rekening || '-',
+          //   nomorRekening: res.data.karyawan_detail?.nomor_rekening || '-',
+          //   namaPemilikRekening: res.data.karyawan_detail?.nama_pemilik_rekening || '-',
+          // },
         };
 
         setProfile(data);
@@ -137,8 +137,8 @@ export default function ProfilKaryawanPage() {
         namaBelakang={profile.namaBelakang}
         tanggalLahir={profile.tanggalLahir}
         jenisKelamin={profile.jenisKelamin}
-        tinggiBadan={profile.tinggiBadan}
-        beratBadan={profile.beratBadan}
+        // tinggiBadan={profile.tinggiBadan} // Removed
+        // beratBadan={profile.beratBadan} // Removed
       />
 
       {/* Alamat */}
@@ -156,12 +156,12 @@ export default function ProfilKaryawanPage() {
       />
 
       {/* Rekening Bank */}
-      <RekeningBankSection
+      {/* <RekeningBankSection
         namaBank={profile.rekening.namaBank}
         namaRekening={profile.rekening.namaRekening}
         nomorRekening={profile.rekening.nomorRekening}
         namaPemilikRekening={profile.rekening.namaPemilikRekening}
-      />
+      /> */}
     </div>
   );
 }

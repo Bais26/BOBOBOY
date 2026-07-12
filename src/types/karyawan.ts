@@ -3,10 +3,21 @@ interface Division {
   name: string;
 }
 
+interface Position {
+  id: string;
+  name: string;
+}
+
+interface Subdivision {
+  id: string;
+  name: string;
+  division?: Division | null;
+}
+
 interface KaryawanDetail {
-  posisi: string;
-  status: StatusKaryawan;
-  division: Division;
+  status: StatusKaryawan | null;
+  division: Division | null;
+  subdivision: Subdivision | null;
   // Anda bisa menambahkan properti lain dari karyawan_detail di sini jika diperlukan
 }
 

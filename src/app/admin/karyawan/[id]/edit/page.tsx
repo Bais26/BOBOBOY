@@ -1,43 +1,46 @@
 'use client';
 import { useParams, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import Swal from "sweetalert2";
 import api from "@/lib/api";
 
 import Input from "@/components/shared/Input";
-import Select from "@/components/shared/Select";
+import Select from "@/components/shared/Select"; // Kita akan ganti dengan CreatableSelect
+import CreatableSelect from 'react-select/creatable';
+
+import useLocalStorage from "@/hooks/useLocalStorage";
+
+interface SelectOption {
+  value: string;
+  label: string;
+  __isNew__?: boolean;
+  division?: { id?: string; name?: string };
+}
+
+interface Division {
+  id: string;
+  name: string;
+}
 
 interface FormData {
   id: string;
   fullName: string;
   email: string;
-  jabatan: string;
+  division: SelectOption | null;
   status: string;
   namaDepan: string;
   namaBelakang: string;
   tanggalLahir: string;
   jenisKelamin: string;
-  tinggiBadan: string;
-  beratBadan: string;
   namaAlamat: string;
   namaJalan: string;
   detailAlamat: string;
   kontakNama: string;
   kontakHubungan: string;
   kontakTelepon: string;
-  namaBank: string;
-  nomorRekening: string;
-  namaPemilikRekening: string;
+  subdivision: SelectOption | null;
 }
-
-const jabatanOptions = [
-  { label: "Web Developer", value: "WEB DEVELOPER" },
-  { label: "Mobile Developer", value: "MOBILE DEVELOPER" },
-  { label: "UI/UX Designer", value: "UI/UX DESIGNER" },
-  { label: "Project Manager", value: "PROJECT MANAGER" },
-  { label: "Business Analyst", value: "BUSINESS ANALYST" },
-];
 
 const statusOptions = [
   { label: "Aktif", value: "Aktif" },
@@ -45,8 +48,8 @@ const statusOptions = [
 ];
 
 const jenisKelaminOptions = [
-  { label: "Laki-laki", value: "Laki-laki" },
-  { label: "Perempuan", value: "Perempuan" },
+  { label: "Laki-laki", value: "LAKI-LAKI" },
+  { label: "Perempuan", value: "PEREMPUAN" },
 ];
 
 export default function EditKaryawanPage() {
@@ -56,27 +59,27 @@ export default function EditKaryawanPage() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [subdivisionOptions, setSubdivisionOptions] = useState<SelectOption[]>([]);
+  const [divisionOptions, setDivisionOptions] = useState<Division[]>([]);
+  const [filteredSubdivisionOptions, setFilteredSubdivisionOptions] = useState<SelectOption[]>([]);
+
   const [formData, setFormData] = useState<FormData>({
     id: "",
     fullName: "",
     email: "",
-    jabatan: "",
+    division: null,
     status: "",
     namaDepan: "",
     namaBelakang: "",
     tanggalLahir: "",
     jenisKelamin: "",
-    tinggiBadan: "",
-    beratBadan: "",
     namaAlamat: "",
     namaJalan: "",
     detailAlamat: "",
     kontakNama: "",
     kontakHubungan: "",
     kontakTelepon: "",
-    namaBank: "",
-    nomorRekening: "",
-    namaPemilikRekening: "",
+    subdivision: null,
   });
 
   // Fetch karyawan by ID
@@ -84,33 +87,44 @@ export default function EditKaryawanPage() {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        // Using axios instance from lib/api.ts
-        const res = await api.get(`/v1/karyawan/${karyawanId}`);
+        // Fetch karyawan, subdivisi, dan divisi secara paralel
+        const [karyawanRes, subdivisionsRes, divisionsRes] = await Promise.all([
+          api.get(`/v1/karyawan/${karyawanId}`),
+          api.get('/v1/subdivisions'), // Asumsi endpoint ini ada
+          api.get('/v1/divisions')      // Asumsi endpoint ini ada
+        ]);
 
-        const data = res.data;
+        const data = karyawanRes.data;
         const detail = data.karyawan_detail || {};
+
+        const fetchedSubdivisions = subdivisionsRes.data.map((sub: any) => ({
+          value: sub.id,
+          label: sub.name,
+          division: sub.division,
+        }));
+        setSubdivisionOptions(fetchedSubdivisions);
+        setDivisionOptions(divisionsRes.data);
+
+        const currentSubdivision = fetchedSubdivisions.find((sub: SelectOption) => sub.value === detail.subdivision_id);
+        const currentDivision = divisionsRes.data.find((div: Division) => div.id === currentSubdivision?.division?.id);
 
         setFormData({
           id: data.id,
           fullName: data.full_name || "",
           email: data.email || "",
-          jabatan: data.posisi || detail.posisi || "",
+          division: currentDivision ? { value: currentDivision.id, label: currentDivision.name } : null,
           status: detail.status || (data.is_active ? "Aktif" : "Nonaktif"),
           namaDepan: detail.nama_depan || "",
           namaBelakang: detail.nama_belakang || "",
           tanggalLahir: detail.tanggal_lahir || "",
-          jenisKelamin: detail.jenis_kelamin || "",
-          tinggiBadan: detail.tinggi_badan || "",
-          beratBadan: detail.berat_badan || "",
+          jenisKelamin: (detail.jenis_kelamin || "").toUpperCase(),
           namaAlamat: detail.nama_alamat || "",
           namaJalan: detail.alamat_lengkap || "",
           detailAlamat: detail.detail_alamat || "",
           kontakNama: detail.nama_kontak_darurat || "",
           kontakHubungan: detail.hubungan_kontak_darurat || "",
           kontakTelepon: detail.nomor_telepon_darurat || "",
-          namaBank: detail.nama_bank || "",
-          nomorRekening: detail.nomor_rekening || "",
-          namaPemilikRekening: detail.nama_pemilik_rekening || "",
+          subdivision: currentSubdivision || null,
         });
       } catch (err: any) {
         console.error("Error fetching karyawan:", err);
@@ -128,7 +142,24 @@ export default function EditKaryawanPage() {
     fetchData();
   }, [karyawanId, router]);
 
-  const handleChange = (field: keyof FormData, value: string) => {
+  // Efek untuk memfilter subdivisi berdasarkan divisi yang dipilih
+  useEffect(() => {
+    if (formData.division) {
+      const filtered = subdivisionOptions.filter(
+        (sub) => sub.division?.id === formData.division?.value
+      );
+      setFilteredSubdivisionOptions(filtered);
+    } else {
+      setFilteredSubdivisionOptions([]);
+    }
+  }, [formData.division, subdivisionOptions]);
+
+  const handleChange = (field: keyof FormData, value: any) => {
+    // Jika divisi berubah, reset subdivisi
+    if (field === 'division') {
+      setFormData((prev) => ({ ...prev, subdivision: null, [field]: value }));
+      return;
+    }
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -148,43 +179,66 @@ export default function EditKaryawanPage() {
     if (!confirmResult.isConfirmed) return;
 
     setIsSaving(true);
+
+    // Construct division_input payload
+    let divisionInput = null;
+    if (formData.division) {
+      if (formData.division.__isNew__) {
+        // Membuat divisi baru
+        divisionInput = { name: formData.division.label };
+      } else {
+        // Memilih divisi yang sudah ada
+        divisionInput = { id: formData.division.value };
+      }
+    }
+    // Construct subdivision_input payload
+    let subdivisionInput = null;
+    if (formData.subdivision) {
+      if (formData.subdivision.__isNew__) {
+        // Skenario 2 & 3: Membuat subdivisi baru
+        subdivisionInput = {
+          name: formData.subdivision.label,
+          division: divisionInput, // Gunakan divisionInput yang sudah dibuat
+        };
+        if (!subdivisionInput.division) {
+          throw new Error("Divisi harus dipilih atau dibuat untuk membuat subdivisi baru.");
+        }
+      } else {
+        // Skenario 1: Memilih subdivisi yang sudah ada
+        subdivisionInput = { id: formData.subdivision.value };
+      }
+    } else if (formData.division) {
+      // Jika hanya divisi yang dipilih/dibuat (tanpa subdivisi)
+      subdivisionInput = { division: divisionInput };
+    }
+
     try {
       // Prepare payload
       const payload = {
-        full_name: formData.fullName,
-        email: formData.email,
-        posisi: formData.jabatan,
-        is_active: formData.status === "Aktif",
-        karyawan_detail: {
+        detail: {
           nama_depan: formData.namaDepan,
           nama_belakang: formData.namaBelakang,
           tanggal_lahir: formData.tanggalLahir,
           jenis_kelamin: formData.jenisKelamin,
-          tinggi_badan: formData.tinggiBadan,
-          berat_badan: formData.beratBadan,
+          status: formData.status,
           nama_alamat: formData.namaAlamat,
           alamat_lengkap: formData.namaJalan,
           detail_alamat: formData.detailAlamat,
           nama_kontak_darurat: formData.kontakNama,
           hubungan_kontak_darurat: formData.kontakHubungan,
           nomor_telepon_darurat: formData.kontakTelepon,
-          nama_bank: formData.namaBank,
-          nomor_rekening: formData.nomorRekening,
-          nama_pemilik_rekening: formData.namaPemilikRekening,
-          status: formData.status,
+          // Data lain yang mungkin ada di form
+          // nama_bank, nomor_rekening, etc. perlu ditambahkan di state & form jika ingin di-update
         },
+        // Menggunakan nama 'subdivision' sesuai permintaan, bukan 'subdivision_input'
+        subdivision: subdivisionInput,
       };
 
       // Debug: Log payload yang akan dikirim
       console.log('=== PAYLOAD YANG DIKIRIM ===');
       console.log('Full Payload:', JSON.stringify(payload, null, 2));
-      console.log('Nama Bank:', formData.namaBank);
-      console.log('Nomor Rekening:', formData.nomorRekening);
-      console.log('Nama Pemilik:', formData.namaPemilikRekening);
       console.log('===========================');
-
-      // Using axios instance from lib/api.ts
-      // PUT to /api/v1/karyawan/{karyawan_id}/detail
+      
       const response = await api.put(`/v1/karyawan/${karyawanId}/detail`, payload);
       
       // Debug: Log response dari server
@@ -265,14 +319,27 @@ export default function EditKaryawanPage() {
               onChange={(v) => handleChange("email", v)}
               required
             />
-            <Select 
-              name="jabatan" 
-              label="Jabatan" 
-              value={formData.jabatan} 
-              onChange={(v) => handleChange("jabatan", v)} 
-              options={jabatanOptions}
-              required
-            />
+            <div>
+              <label htmlFor="division" className="block text-sm font-medium text-gray-700 mb-2">Divisi</label>
+              <CreatableSelect
+                isClearable
+                id="division"
+                placeholder="Pilih atau ketik untuk membuat Divisi"
+                options={divisionOptions.map(d => ({ label: d.name, value: d.id }))}
+                value={formData.division}
+                onChange={(newValue) => handleChange("division", newValue)}
+                onCreateOption={(inputValue) => {
+                  const newOption: SelectOption = {
+                    value: inputValue.toLowerCase().replace(/\W/g, ''),
+                    label: inputValue,
+                    __isNew__: true,
+                  };
+                  setDivisionOptions((prev) => [...prev, { id: newOption.value, name: newOption.label }]);
+                  handleChange("division", newOption);
+                }}
+                formatCreateLabel={(inputValue) => `Buat Divisi baru: "${inputValue}"`}
+              />
+            </div>
             <Select 
               name="status" 
               label="Status Karyawan" 
@@ -281,6 +348,29 @@ export default function EditKaryawanPage() {
               options={statusOptions}
               required
             />
+            <div>
+              <label htmlFor="subdivision" className="block text-sm font-medium text-gray-700 mb-2">Subdivisi</label>
+              <CreatableSelect
+                isClearable
+                id="subdivision"
+                placeholder={!formData.division ? "Pilih Divisi terlebih dahulu" : "Pilih atau ketik untuk membuat Subdivisi"}
+                options={filteredSubdivisionOptions}
+                value={formData.subdivision}
+                onChange={(newValue) => handleChange("subdivision", newValue)}
+                onCreateOption={(inputValue) => {
+                  const newOption: SelectOption = {
+                    value: inputValue.toLowerCase().replace(/\W/g, ''),
+                    label: inputValue,
+                    __isNew__: true,
+                    division: { id: formData.division?.value } // Tautkan ke divisi yg sedang dipilih
+                  };
+                  setSubdivisionOptions((prev) => [...prev, newOption]);
+                  handleChange("subdivision", newOption);
+                }}
+                formatCreateLabel={(inputValue) => `Buat Subdivisi baru: "${inputValue}"`}
+                isDisabled={!formData.division}
+              />
+            </div>
           </div>
         </div>
 
@@ -296,12 +386,14 @@ export default function EditKaryawanPage() {
               label="Nama Depan" 
               value={formData.namaDepan} 
               onChange={(v) => handleChange("namaDepan", v)} 
+              required
             />
             <Input 
               name="namaBelakang" 
               label="Nama Belakang" 
               value={formData.namaBelakang} 
               onChange={(v) => handleChange("namaBelakang", v)} 
+              required
             />
             <Input 
               name="tanggalLahir" 
@@ -309,6 +401,7 @@ export default function EditKaryawanPage() {
               type="date"
               value={formData.tanggalLahir} 
               onChange={(v) => handleChange("tanggalLahir", v)} 
+              required
             />
             <Select 
               name="jenisKelamin" 
@@ -316,20 +409,7 @@ export default function EditKaryawanPage() {
               value={formData.jenisKelamin} 
               onChange={(v) => handleChange("jenisKelamin", v)} 
               options={jenisKelaminOptions} 
-            />
-            <Input 
-              name="tinggiBadan" 
-              label="Tinggi Badan (cm)" 
-              type="number"
-              value={formData.tinggiBadan} 
-              onChange={(v) => handleChange("tinggiBadan", v)} 
-            />
-            <Input 
-              name="beratBadan" 
-              label="Berat Badan (kg)" 
-              type="number"
-              value={formData.beratBadan} 
-              onChange={(v) => handleChange("beratBadan", v)} 
+              required
             />
           </div>
         </div>
@@ -347,6 +427,7 @@ export default function EditKaryawanPage() {
               value={formData.namaAlamat} 
               onChange={(v) => handleChange("namaAlamat", v)} 
               placeholder="Contoh: Rumah, Kost, dll"
+              required
             />
             <Input 
               name="namaJalan" 
@@ -354,6 +435,7 @@ export default function EditKaryawanPage() {
               value={formData.namaJalan} 
               onChange={(v) => handleChange("namaJalan", v)} 
               placeholder="Jalan, RT/RW, Kelurahan, Kecamatan"
+              required
             />
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -365,6 +447,7 @@ export default function EditKaryawanPage() {
                 rows={3} 
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                 placeholder="Informasi tambahan tentang alamat"
+                required
               />
             </div>
           </div>
@@ -382,6 +465,7 @@ export default function EditKaryawanPage() {
               label="Nama Kontak Darurat" 
               value={formData.kontakNama} 
               onChange={(v) => handleChange("kontakNama", v)} 
+              required
             />
             <Input 
               name="kontakHubungan" 
@@ -389,6 +473,7 @@ export default function EditKaryawanPage() {
               value={formData.kontakHubungan} 
               onChange={(v) => handleChange("kontakHubungan", v)} 
               placeholder="Contoh: Orang Tua, Saudara"
+              required
             />
             <Input 
               name="kontakTelepon" 
@@ -397,40 +482,8 @@ export default function EditKaryawanPage() {
               value={formData.kontakTelepon} 
               onChange={(v) => handleChange("kontakTelepon", v)} 
               placeholder="Contoh: 08123456789"
+              required
             />
-          </div>
-        </div>
-
-        {/* Rekening Bank */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Rekening Bank</h2>
-            <p className="text-sm text-gray-500 mt-1">Informasi rekening untuk transfer gaji</p>
-          </div>
-          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input 
-              name="namaBank" 
-              label="Nama Bank" 
-              value={formData.namaBank} 
-              onChange={(v) => handleChange("namaBank", v)} 
-              placeholder="Contoh: BCA, Mandiri, BNI"
-            />
-            <Input 
-              name="nomorRekening" 
-              label="Nomor Rekening" 
-              value={formData.nomorRekening} 
-              onChange={(v) => handleChange("nomorRekening", v)} 
-              placeholder="Nomor rekening bank"
-            />
-            <div className="md:col-span-2">
-              <Input 
-                name="namaPemilikRekening" 
-                label="Nama Pemilik Rekening" 
-                value={formData.namaPemilikRekening} 
-                onChange={(v) => handleChange("namaPemilikRekening", v)} 
-                placeholder="Sesuai dengan nama di buku rekening"
-              />
-            </div>
           </div>
         </div>
 

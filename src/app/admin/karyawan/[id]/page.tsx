@@ -22,10 +22,6 @@ export default function ProfilKaryawanPage() {
     const fetchProfile = async () => {
       try {
         setLoading(true);
-
-        // Tentukan karyawan_id
-        // Jika ada params.id, gunakan itu (untuk admin view)
-        // Jika tidak, ambil dari localStorage (untuk karyawan view own profile)
         const karyawanId = params?.id || localStorage.getItem('user_id');
         if (!karyawanId) {
           throw new Error('Karyawan ID tidak ditemukan');

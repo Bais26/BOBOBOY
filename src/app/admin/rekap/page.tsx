@@ -26,10 +26,15 @@ const MONTH_OPTIONS = [
   "Desember",
 ].map((label, i) => ({ label, value: String(i + 1) }));
 
-const YEAR_OPTIONS = [
-  new Date().getFullYear() - 1,
-  new Date().getFullYear(),
-].map((y) => ({ label: String(y), value: String(y) }));
+const currentYear = new Date().getFullYear();
+
+const YEAR_OPTIONS = Array.from(
+  { length: 5 },
+  (_, i) => currentYear - i
+).map((y) => ({
+  label: String(y),
+  value: String(y),
+}));
 
 export default function ManagementRekapPage() {
   const router = useRouter();
@@ -141,6 +146,7 @@ export default function ManagementRekapPage() {
                 label="Bulan"
                 options={MONTH_OPTIONS}
                 value={month ? [String(month)] : []}
+                multiSelect={false}
                 onChange={(vals) =>
                   setMonth(vals[0] ? Number(vals[0]) : undefined)
                 }
@@ -152,6 +158,7 @@ export default function ManagementRekapPage() {
               label="Tahun"
               options={YEAR_OPTIONS}
               value={[String(year)]}
+              multiSelect={false}
               onChange={(vals) => {
                 if (vals[0]) setYear(Number(vals[0]));
               }}
@@ -170,13 +177,6 @@ export default function ManagementRekapPage() {
 
             <ExportButton onExport={handleExport} />
 
-            <button
-              onClick={() => router.push("/admin/karyawan/create")}
-              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-            >
-              <PlusIcon className="w-5 h-5" />
-              Tambah Karyawan
-            </button>
           </div>
         </div>
 

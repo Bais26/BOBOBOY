@@ -97,7 +97,7 @@ export interface RekapTableRow {
   hadir: string;
   terlambat: string;
   alfa: string;
-  wfo: string;
-  wfh: string;
+  wfo?: string;
+  wfh?: string;
   total_jam_kerja: string;
 }

@@ -10,9 +10,9 @@ import ExportButton from "@/components/shared/ExportButton";
 import Pagination from "@/components/shared/Pagination";
 import ActionMenu from "@/components/shared/ActionMenu";
 import { Karyawan, StatusKaryawan, StatusAktif } from "@/types/karyawan";
-import { Absensi } from "@/types/riyawat";
+import { Riwayat} from "@/types/riyawat";
 
-const mockAbsensi: Absensi[] = Array.from({ length: 30 }, (_, i) => ({
+const mockAbsensi: Riwayat[] = Array.from({ length: 30 }, (_, i) => ({
   id: `ABS-${i}`,
   tanggal: "24/10/2024",
   jamMasuk: "08:05",
@@ -77,7 +77,7 @@ export default function ManagementKaryawanPage() {
     { header: "JAM KERJA", accessor: "jamKerja" },
     {
       header: "MODE KERJA",
-      accessor: ((row: Absensi) => (
+      accessor: ((row: Riwayat) => (
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-green-500" />
           <span className="text-sm">{row.modeKerja}</span>
@@ -86,13 +86,13 @@ export default function ManagementKaryawanPage() {
     },
     {
       header: "LOKASI ABSEN",
-      accessor: ((row: Absensi) => (
+      accessor: ((row: Riwayat) => (
         <span className="text-sm text-gray-600">{row.lokasi}</span>
       )) as any,
     },
     {
       header: "STATUS",
-      accessor: ((row: Absensi) => (
+      accessor: ((row: Riwayat) => (
         <StatusBadge status={row.status} variant="aktif" />
       )) as any,
     },

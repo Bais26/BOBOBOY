@@ -12,8 +12,8 @@ export interface KaryawanProfile {
   namaBelakang: string;
   tanggalLahir: string;
   jenisKelamin: 'Laki-laki' | 'Perempuan';
-  tinggiBadan: string;
-  beratBadan: string;
+  tinggiBadan?: string;
+  beratBadan?: string;
   
   // Alamat
   namaAlamat: string;
@@ -32,7 +32,7 @@ export interface KaryawanProfile {
   };
   
   // Data Rekening Bank
-  rekening: {
+  rekening?: {
     namaBank: string;
     namaRekening: string;
     nomorRekening: string;

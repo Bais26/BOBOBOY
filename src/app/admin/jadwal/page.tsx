@@ -405,7 +405,7 @@ export default function ManagementRekapPage() {
                     <tr
                       key={karyawan.user_id}
                       className="hover:bg-gray-50 cursor-pointer transition-colors"
-                      onClick={() => router.push(`/admin/karyawan/${karyawan.employeeCode}`)}
+                      onClick={() => handleOpenEditModal(karyawan)}
                     >
                       <td className="px-3 py-3 whitespace-nowrap">
                         <span className="font-medium text-gray-900 text-sm">{karyawan.employeeCode}</span>

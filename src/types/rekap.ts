@@ -88,7 +88,10 @@ export interface RekapQueryParams {
 // ─── UI / Table Row ───────────────────────────────────────────────────────────
 
 export interface RekapTableRow {
-  id: number;
+  id: string | number;
+  tanggal?: string;
+  check_in_time?: string;
+  check_out_time?: string;
   user_id: string | number;
   nama_lengkap: string;
   email: string;

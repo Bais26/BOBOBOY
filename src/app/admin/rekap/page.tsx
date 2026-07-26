@@ -80,7 +80,7 @@ export default function ManagementRekapPage() {
   };
 
   const tableRows: RekapTableRow[] = (data?.karyawan ?? []).map((k, index) => ({
-    id: (currentPage - 1) * 10 + index + 1,
+    id: String((currentPage - 1) * 10 + index + 1),
     user_id: k.user_id,
     nama_lengkap: k.nama_lengkap,
     email: k.email,
@@ -221,13 +221,13 @@ export default function ManagementRekapPage() {
           </div>
         ) : (
           <div className={isLoading ? "opacity-60 pointer-events-none" : ""}>
-            <Table
-              columns={columns}
-              data={tableRows}
-              onRowClick={(row) =>
-                router.push(`/admin/karyawan/${row.user_id}`)
-              }
-            />
+            <Table<RekapTableRow>
+  columns={columns}
+  data={tableRows}
+  onRowClick={(row) =>
+    router.push(`/admin/karyawan/${row.user_id}`)
+  }
+/>
           </div>
         )}
 

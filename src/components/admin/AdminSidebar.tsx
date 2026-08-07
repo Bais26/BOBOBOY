@@ -64,13 +64,6 @@ export default function AdminSidebar() {
           );
         })}
       </nav>
-
-      <div className="p-4 border-t border-gray-200">
-        <button className="flex items-center gap-3 px-4 py-3 w-full text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
-          <ArrowLeftOnRectangleIcon className="w-5 h-5" />
-          <span className="text-sm font-medium">Logout</span>
-        </button>
-      </div>
     </aside>
   );
 }

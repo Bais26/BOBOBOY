@@ -97,11 +97,6 @@ export default function Header({ role }: HeaderProps) {
         </h1>
 
         <div className="flex items-center gap-4">
-          <button className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
-            <BellIcon className="w-6 h-6" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-          </button>
-
           <div className="relative" ref={dropdownRef}>
             <div
               className="flex items-center gap-3 pl-4 border-l border-gray-200 cursor-pointer hover:bg-gray-50 rounded-lg px-3 py-2 transition-colors"

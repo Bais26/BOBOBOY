@@ -90,6 +90,19 @@ interface RekapWithSchedule {
   };
 }
 
+interface OfficeLocation {
+  id: string;
+  name: string;
+  capacity: number;
+  address: string;
+  latitude: number;
+  longitude: number;
+  radius: number;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
 interface ApiResponse {
   start_date: string;
   end_date: string;
@@ -113,6 +126,7 @@ export default function ManagementRekapPage() {
   const [isGenerateJadwalOpen, setIsGenerateJadwalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<RekapWithSchedule | null>(null);
   const itemsPerPage = 10;
+  const [editingLocation, setEditingLocation] = useState<OfficeLocation | null>(null);
 
   // Fetch data from API
   useEffect(() => {
@@ -507,7 +521,8 @@ export default function ManagementRekapPage() {
       {/* Popup Components */}
       <TambahLokasiWFOPopup
         isOpen={isTambahLokasiOpen} 
-        onClose={() => setIsTambahLokasiOpen(false)} 
+        onClose={() => setIsTambahLokasiOpen(false)}
+         
       />
 
       <ScheduleEditModal

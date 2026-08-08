@@ -16,6 +16,16 @@ interface GenerateJadwalPopupProps {
   onSuccess?: () => void;
 }
 
+// interface OfficeLocation {
+//   id: string;
+//   name: string;
+//   capacity: number;
+//   address: string;
+//   latitude: number;
+//   longitude: number;
+//   radius: number;
+//   is_active: boolean;
+// }
 interface OfficeLocation {
   id: string;
   name: string;
@@ -24,7 +34,9 @@ interface OfficeLocation {
   latitude: number;
   longitude: number;
   radius: number;
-  is_active: boolean;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface GenerateScheduleRequest {
@@ -295,8 +307,6 @@ export default function GenerateJadwalPopup({
             ${new Date(result.end_date).toLocaleDateString("id-ID")}</p>
 
             <p><b>📋 Total Jadwal:</b> ${result.total_schedules}</p>
-
-            <p><b>👥 Karyawan:</b> ${result.affected_employees}</p>
           </div>
         `,
         confirmButtonText: "OK",

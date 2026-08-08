@@ -8,22 +8,22 @@ import {
 } from "@heroicons/react/24/outline";
 import Swal from "sweetalert2";
 
-import dynamic from 'next/dynamic'
+import dynamic from "next/dynamic";
 
-const LocationPickerMap = dynamic(() => import('./LocationPickerMap'), {
+const LocationPickerMap = dynamic(() => import("./LocationPickerMap"), {
   ssr: false,
   loading: () => (
     <div className="h-[300px] w-full bg-gray-100 rounded-lg flex items-center justify-center text-sm text-gray-400">
       Memuat peta...
     </div>
   ),
-})
+});
 
 interface TambahLokasiWFOPopupProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
-  editingLocation?: OfficeLocation | null;
+  // editingLocation?: OfficeLocation | null;
 }
 
 interface OfficeLocation {
@@ -86,7 +86,7 @@ export default function TambahLokasiWFOPopup({
   isOpen,
   onClose,
   onSuccess,
-  editingLocation = null,
+  // editingLocation = null,
 }: TambahLokasiWFOPopupProps) {
   const [formData, setFormData] = useState({
     name: "",
@@ -106,6 +106,9 @@ export default function TambahLokasiWFOPopup({
     [],
   );
   const [showAllLocations, setShowAllLocations] = useState(false);
+  const [editingLocation, setEditingLocation] = useState<OfficeLocation | null>(
+    null,
+  );
 
   // Load existing locations on open
   useEffect(() => {
@@ -116,6 +119,8 @@ export default function TambahLokasiWFOPopup({
 
   // Pre-fill form if editing
   useEffect(() => {
+    if (!isOpen) return;
+    
     if (editingLocation && isOpen) {
       setFormData({
         name: editingLocation.name,
@@ -476,6 +481,7 @@ export default function TambahLokasiWFOPopup({
       });
 
       setValidationResult(null);
+      setEditingLocation(null);
 
       // Refresh locations list
       await loadExistingLocations();
@@ -575,6 +581,7 @@ export default function TambahLokasiWFOPopup({
   };
 
   const handleEditLocation = (location: OfficeLocation) => {
+    setEditingLocation(location);
     // Pre-fill form dengan data lokasi yang dipilih
     setFormData({
       name: location.name,
@@ -584,6 +591,9 @@ export default function TambahLokasiWFOPopup({
       longitude: location.longitude.toString(),
       radius: location.radius.toString(),
     });
+
+    setError(null);
+    setValidationResult(null);
 
     // Scroll to top of form
     setTimeout(() => {

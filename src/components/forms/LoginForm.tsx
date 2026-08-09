@@ -187,18 +187,6 @@ export function LoginForm() {
           )}
         </Button>
       </form>
-
-      <div className="mt-8 text-center">
-        <p className="text-gray-600">
-          Belum punya akun?{" "}
-          <Link
-            href="/register"
-            className="text-blue-600 hover:text-blue-500 font-medium"
-          >
-            Daftar sekarang
-          </Link>
-        </p>
-      </div>
     </div>
   );
 }

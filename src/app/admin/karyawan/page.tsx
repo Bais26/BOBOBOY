@@ -106,7 +106,7 @@ export default function ManagementKaryawanPage() {
       if (!token) throw new Error("Token tidak ditemukan");
 
       await axios.delete(
-        `${process.env.NEXT_PUBLIC_API_URL}/v1/karyawan/${id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/v1/karyawan/${id}/detail`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -161,11 +161,6 @@ export default function ManagementKaryawanPage() {
             {
               label: "Edit",
               onClick: () => router.push(`/admin/karyawan/${row.id}/edit`),
-            },
-            {
-              label: "Hapus",
-              onClick: () => handleDelete(row.id),
-              danger: true,
             },
           ]}
         />

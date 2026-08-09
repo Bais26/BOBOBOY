@@ -1,8 +1,15 @@
 "use client";
 import { useState, useEffect, Fragment } from "react";
 import { useRouter } from "next/navigation";
-import { BuildingOfficeIcon, HomeIcon, XMarkIcon, CalendarIcon, EllipsisVerticalIcon, PencilSquareIcon } from "@heroicons/react/24/outline";
-import { Menu, Transition } from '@headlessui/react';
+import {
+  BuildingOfficeIcon,
+  HomeIcon,
+  XMarkIcon,
+  CalendarIcon,
+  EllipsisVerticalIcon,
+  PencilSquareIcon,
+} from "@heroicons/react/24/outline";
+import { Menu, Transition } from "@headlessui/react";
 import SearchInput from "@/components/shared/SearchInput";
 import FilterButton from "@/components/shared/FilterButton";
 import Pagination from "@/components/shared/Pagination";
@@ -20,28 +27,35 @@ interface SimpleModalProps {
   size?: "sm" | "md" | "lg" | "xl";
 }
 
-function SimpleModal({ isOpen, onClose, title, subtitle, children, size = "md" }: SimpleModalProps) {
+function SimpleModal({
+  isOpen,
+  onClose,
+  title,
+  subtitle,
+  children,
+  size = "md",
+}: SimpleModalProps) {
   if (!isOpen) return null;
 
   const sizeClasses = {
     sm: "max-w-md",
     md: "max-w-lg",
     lg: "max-w-2xl",
-    xl: "max-w-4xl"
+    xl: "max-w-4xl",
   };
 
   return (
     <>
       {/* Overlay */}
-      <div 
+      <div
         className="fixed inset-0 bg-black bg-opacity-50 z-40"
         onClick={onClose}
       />
-      
+
       {/* Modal */}
       <div className="fixed inset-0 z-50 overflow-y-auto">
         <div className="flex min-h-full items-center justify-center p-4">
-          <div 
+          <div
             className={`w-full ${sizeClasses[size]} transform rounded-2xl bg-white shadow-xl transition-all`}
             onClick={(e) => e.stopPropagation()}
           >
@@ -124,9 +138,12 @@ export default function ManagementRekapPage() {
   const [totalKaryawan, setTotalKaryawan] = useState(0);
   const [isTambahLokasiOpen, setIsTambahLokasiOpen] = useState(false);
   const [isGenerateJadwalOpen, setIsGenerateJadwalOpen] = useState(false);
-  const [editingEmployee, setEditingEmployee] = useState<RekapWithSchedule | null>(null);
+  const [editingEmployee, setEditingEmployee] =
+    useState<RekapWithSchedule | null>(null);
   const itemsPerPage = 10;
-  const [editingLocation, setEditingLocation] = useState<OfficeLocation | null>(null);
+  const [editingLocation, setEditingLocation] = useState<OfficeLocation | null>(
+    null,
+  );
 
   // Fetch data from API
   useEffect(() => {
@@ -137,19 +154,20 @@ export default function ManagementRekapPage() {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Using axios instance from lib/api.ts
-      const response = await api.get<ApiResponse>('/v1/schedule/all');
-      
+      const response = await api.get<ApiResponse>("/v1/schedule/all");
+
       setData(response.data.data);
       setStartDate(response.data.start_date);
       setEndDate(response.data.end_date);
       setTotalKaryawan(response.data.total_karyawan);
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch data';
+      const errorMessage =
+        err.response?.data?.message || err.message || "Failed to fetch data";
       setError(errorMessage);
-      console.error('Error fetching schedule data:', err);
-      
+      console.error("Error fetching schedule data:", err);
+
       // Jika unauthorized, redirect ke login
       if (err.response?.status === 401) {
         // router.push('/login'); // Uncomment jika ingin redirect
@@ -161,22 +179,27 @@ export default function ManagementRekapPage() {
 
   const filteredData = data.filter((karyawan) => {
     const q = searchQuery.toLowerCase();
-    const matchesSearch = 
-      karyawan.nama.toLowerCase().includes(q) ||
-      karyawan.employeeCode.toLowerCase().includes(q) ||
-      karyawan.jabatan.toLowerCase().includes(q);
-    
-    const matchesStatus = 
-      statusFilter.length === 0 || 
-      statusFilter.includes(karyawan.status);
-    
+    const matchesSearch =
+      String(karyawan.nama ?? "")
+        .toLowerCase()
+        .includes(q) ||
+      String(karyawan.employeeCode ?? "")
+        .toLowerCase()
+        .includes(q) ||
+      String(karyawan.jabatan ?? "")
+        .toLowerCase()
+        .includes(q);
+
+    const matchesStatus =
+      statusFilter.length === 0 || statusFilter.includes(karyawan.status);
+
     return matchesSearch && matchesStatus;
   });
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
   const paginatedData = filteredData.slice(
     (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    currentPage * itemsPerPage,
   );
 
   const handleOpenEditModal = (karyawan: RekapWithSchedule) => {
@@ -192,10 +215,11 @@ export default function ManagementRekapPage() {
   // Render schedule cell (hanya tampilan)
   const renderScheduleCell = (
     karyawan: RekapWithSchedule,
-    day: keyof RekapWithSchedule["schedule"]
+    day: keyof RekapWithSchedule["schedule"],
   ) => {
     const status = karyawan.schedule[day];
-    const baseClasses = "flex items-center justify-center gap-1.5 rounded px-2 py-1 text-xs font-medium min-w-[70px]";
+    const baseClasses =
+      "flex items-center justify-center gap-1.5 rounded px-2 py-1 text-xs font-medium min-w-[70px]";
     const statusClasses = {
       WFH: "bg-blue-50 text-blue-700",
       WFO: "bg-green-50 text-green-700",
@@ -228,13 +252,23 @@ export default function ManagementRekapPage() {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-6">
         <div className="flex items-center gap-3">
-          <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <svg
+            className="w-6 h-6 text-red-600"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
           <div>
             <h3 className="font-semibold text-red-900">Error Loading Data</h3>
             <p className="text-sm text-red-700 mt-1">{error}</p>
-            {error.includes('Unauthorized') && (
+            {error.includes("Unauthorized") && (
               <p className="text-xs text-red-600 mt-2">
                 Silakan login kembali untuk mengakses halaman ini.
               </p>
@@ -248,9 +282,9 @@ export default function ManagementRekapPage() {
           >
             Coba Lagi
           </button>
-          {error.includes('Unauthorized') && (
+          {error.includes("Unauthorized") && (
             <button
-              onClick={() => router.push('/login')}
+              onClick={() => router.push("/login")}
               className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
             >
               Ke Halaman Login
@@ -270,23 +304,31 @@ export default function ManagementRekapPage() {
             <div className="flex items-center gap-3">
               <CalendarIcon className="w-5 h-5 text-blue-600" />
               <div>
-                <p className="text-sm font-medium text-blue-900">Periode Jadwal</p>
+                <p className="text-sm font-medium text-blue-900">
+                  Periode Jadwal
+                </p>
                 <p className="text-xs text-blue-700 mt-0.5">
-                  {new Date(startDate).toLocaleDateString('id-ID', { 
-                    day: 'numeric', 
-                    month: 'long', 
-                    year: 'numeric' 
-                  })} - {new Date(endDate).toLocaleDateString('id-ID', { 
-                    day: 'numeric', 
-                    month: 'long', 
-                    year: 'numeric' 
+                  {new Date(startDate).toLocaleDateString("id-ID", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })}{" "}
+                  -{" "}
+                  {new Date(endDate).toLocaleDateString("id-ID", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
                   })}
                 </p>
               </div>
             </div>
             <div className="text-right">
-              <p className="text-sm font-medium text-blue-900">Total Karyawan</p>
-              <p className="text-2xl font-bold text-blue-600">{totalKaryawan}</p>
+              <p className="text-sm font-medium text-blue-900">
+                Total Karyawan
+              </p>
+              <p className="text-2xl font-bold text-blue-600">
+                {totalKaryawan}
+              </p>
             </div>
           </div>
         </div>
@@ -296,8 +338,18 @@ export default function ManagementRekapPage() {
       <div className="bg-white rounded-lg shadow-sm p-4 border-l-4 border-blue-600">
         <div className="flex items-start gap-3">
           <div className="flex-shrink-0 mt-0.5">
-            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <svg
+              className="w-5 h-5 text-blue-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
             </svg>
           </div>
           <div className="flex-1">
@@ -317,7 +369,8 @@ export default function ManagementRekapPage() {
               </div>
             </div>
             <p className="text-xs text-gray-500 mt-3">
-              Klik ikon atau dropdown untuk mengubah jadwal karyawan atau klik tambah karyawan untuk menambahkan jadwal kerja ke karyawan
+              Klik ikon atau dropdown untuk mengubah jadwal karyawan atau klik
+              tambah karyawan untuk menambahkan jadwal kerja ke karyawan
             </p>
           </div>
         </div>
@@ -365,12 +418,24 @@ export default function ManagementRekapPage() {
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         {paginatedData.length === 0 ? (
           <div className="text-center py-12">
-            <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            <svg
+              className="w-16 h-16 text-gray-400 mx-auto mb-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
             </svg>
             <p className="text-gray-600 font-medium">Tidak ada data karyawan</p>
             <p className="text-sm text-gray-500 mt-1">
-              {searchQuery ? "Coba ubah kata kunci pencarian" : "Belum ada jadwal yang tersedia"}
+              {searchQuery
+                ? "Coba ubah kata kunci pencarian"
+                : "Belum ada jadwal yang tersedia"}
             </p>
           </div>
         ) : (
@@ -422,23 +487,35 @@ export default function ManagementRekapPage() {
                       onClick={() => handleOpenEditModal(karyawan)}
                     >
                       <td className="px-3 py-3 whitespace-nowrap">
-                        <span className="font-medium text-gray-900 text-sm">{karyawan.employeeCode}</span>
+                        <span className="font-medium text-gray-900 text-sm">
+                          {karyawan.employeeCode}
+                        </span>
                       </td>
                       <td className="px-3 py-3 whitespace-nowrap">
                         <div className="flex flex-col gap-0.5">
-                          <div className="font-medium text-gray-900 text-sm">{karyawan.nama}</div>
-                          <div className="text-xs text-gray-500">{karyawan.jabatan}</div>
+                          <div className="font-medium text-gray-900 text-sm">
+                            {karyawan.nama}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {karyawan.jabatan}
+                          </div>
                         </div>
                       </td>
                       <td className="px-3 py-3 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                          karyawan.status === "Aktif" 
-                            ? "bg-green-50 text-green-700" 
-                            : "bg-gray-50 text-gray-700"
-                        }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${
-                            karyawan.status === "Aktif" ? "bg-green-500" : "bg-gray-500"
-                          }`}></span>
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                            karyawan.status === "Aktif"
+                              ? "bg-green-50 text-green-700"
+                              : "bg-gray-50 text-gray-700"
+                          }`}
+                        >
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${
+                              karyawan.status === "Aktif"
+                                ? "bg-green-500"
+                                : "bg-gray-500"
+                            }`}
+                          ></span>
                           {karyawan.status}
                         </span>
                       </td>
@@ -464,9 +541,12 @@ export default function ManagementRekapPage() {
                         {renderScheduleCell(karyawan, "minggu")}
                       </td>
                       <td className="px-2 py-3 whitespace-nowrap text-center">
-                        <Menu as="div" className="relative inline-block text-left">
+                        <Menu
+                          as="div"
+                          className="relative inline-block text-left"
+                        >
                           <div>
-                            <Menu.Button 
+                            <Menu.Button
                               className="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100"
                               onClick={(e) => e.stopPropagation()}
                             >
@@ -487,8 +567,11 @@ export default function ManagementRekapPage() {
                                 <Menu.Item>
                                   {({ active }) => (
                                     <button
-                                      onClick={(e) => { e.stopPropagation(); handleOpenEditModal(karyawan); }}
-                                      className={`${active ? 'bg-blue-500 text-white' : 'text-gray-900'} group flex w-full items-center rounded-md px-2 py-2 text-sm`}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleOpenEditModal(karyawan);
+                                      }}
+                                      className={`${active ? "bg-blue-500 text-white" : "text-gray-900"} group flex w-full items-center rounded-md px-2 py-2 text-sm`}
                                     >
                                       <PencilSquareIcon className="mr-2 h-5 w-5" />
                                       Edit Jadwal
@@ -520,28 +603,31 @@ export default function ManagementRekapPage() {
 
       {/* Popup Components */}
       <TambahLokasiWFOPopup
-        isOpen={isTambahLokasiOpen} 
+        isOpen={isTambahLokasiOpen}
         onClose={() => setIsTambahLokasiOpen(false)}
-         
       />
 
       <ScheduleEditModal
         isOpen={!!editingEmployee}
         onClose={handleCloseEditModal}
-        employee={editingEmployee ? { 
-            employeeCode: editingEmployee.employeeCode, 
-            userId: editingEmployee.user_id, 
-            name: editingEmployee.nama 
-        } : null}
+        employee={
+          editingEmployee
+            ? {
+                employeeCode: editingEmployee.employeeCode,
+                userId: editingEmployee.user_id,
+                name: editingEmployee.nama,
+              }
+            : null
+        }
       />
-      
+
       <GenerateJadwalPopup
-        isOpen={isGenerateJadwalOpen} 
+        isOpen={isGenerateJadwalOpen}
         onClose={() => {
           setIsGenerateJadwalOpen(false);
           // Refresh data after generating schedule
           fetchScheduleData();
-        }} 
+        }}
       />
     </div>
   );
